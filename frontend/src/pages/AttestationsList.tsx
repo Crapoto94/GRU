@@ -104,7 +104,12 @@ export default function AttestationsList() {
               attestations.map((a) => (
                 <tr key={a.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 text-sm font-medium">{a.titre}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{formatPrenom(a.usager_prenom)} {formatNom(a.usager_nom)}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600">
+                    {formatPrenom(a.usager_prenom)} {formatNom(a.usager_nom)}
+                    {a.usager2_nom && a.usager2_prenom && (
+                      <> & {formatPrenom(a.usager2_prenom)} {formatNom(a.usager2_nom)}</>
+                    )}
+                  </td>
                   <td className="px-6 py-4 text-sm text-gray-600">{a.template_nom}</td>
                   <td className="px-6 py-4 text-sm">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${

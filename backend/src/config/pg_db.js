@@ -147,6 +147,8 @@ async function setupDb() {
       `ALTER TABLE "${SCHEMA_NAME}".users ADD COLUMN IF NOT EXISTS service VARCHAR(200)`,
       `ALTER TABLE "${SCHEMA_NAME}".users ADD COLUMN IF NOT EXISTS direction VARCHAR(200)`,
       `ALTER TABLE "${SCHEMA_NAME}".users ADD COLUMN IF NOT EXISTS source VARCHAR(50) DEFAULT 'local'`,
+      `ALTER TABLE "${SCHEMA_NAME}".templates ADD COLUMN IF NOT EXISTS nb_usagers INTEGER DEFAULT 1`,
+      `ALTER TABLE "${SCHEMA_NAME}".attestations ADD COLUMN IF NOT EXISTS usager2_id UUID REFERENCES "${SCHEMA_NAME}".usagers(id) ON DELETE SET NULL`,
     ];
     for (const sql of alterCols) await client.query(sql);
 

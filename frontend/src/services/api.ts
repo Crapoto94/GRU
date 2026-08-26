@@ -39,7 +39,7 @@ export const attestationsApi = {
   list: (params?: { statut?: string; usager_id?: string }) =>
     api.get<PaginatedResponse<Attestation>>("/api/v1/attestations", { params }),
   getById: (id: string) => api.get<Attestation>(`/api/v1/attestations/${id}`),
-  generate: (data: { usager_id: string; template_id: string; custom_data?: Record<string, string> }) =>
+  generate: (data: { usager_id: string; usager2_id?: string; template_id: string; custom_data?: Record<string, string> }) =>
     api.post<Attestation>("/api/v1/attestations/generate", data),
   download: (id: string) =>
     api.get(`/api/v1/attestations/${id}/download`, { responseType: "blob" }),

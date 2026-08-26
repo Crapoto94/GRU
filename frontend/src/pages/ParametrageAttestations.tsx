@@ -35,6 +35,7 @@ export default function ParametrageAttestations() {
   const [uploadNom, setUploadNom] = useState("");
   const [uploadDesc, setUploadDesc] = useState("");
   const [uploadVars, setUploadVars] = useState("");
+  const [uploadNbUsagers, setUploadNbUsagers] = useState(1);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [aideOuverte, setAideOuverte] = useState(false);
@@ -64,6 +65,7 @@ export default function ParametrageAttestations() {
     formData.append("file", uploadFile);
     formData.append("nom", uploadNom);
     formData.append("description", uploadDesc);
+    formData.append("nb_usagers", String(uploadNbUsagers));
     if (uploadVars.trim()) {
       formData.append(
         "variables",
@@ -78,6 +80,7 @@ export default function ParametrageAttestations() {
       setUploadNom("");
       setUploadDesc("");
       setUploadVars("");
+      setUploadNbUsagers(1);
       setUploadFile(null);
       loadTemplates();
     } catch {
@@ -194,6 +197,10 @@ export default function ParametrageAttestations() {
           <div className="px-6 pb-6 border-t border-gray-100 pt-4 space-y-6">
             <div>
               <h3 className="font-semibold text-sm text-ville-dark mb-3">Variables liees a l'usager (fusion automatique)</h3>
+              <p className="text-xs text-gray-500 mb-3">
+                <strong>Template 1 usager :</strong> utilisez {"{{nom}}"}, {"{{prenom}}"}, etc. directement.<br />
+                <strong>Template 2 usagers :</strong> prefixez par usager1_ ou usager2_ (ex: {"{{usager1_nom}}"}, {"{{usager2_prenom}}"}).
+              </p>
               <div className="bg-gray-50 rounded-lg overflow-hidden">
                 <table className="w-full text-sm">
                   <thead>
@@ -278,6 +285,22 @@ export default function ParametrageAttestations() {
             </div>
           </div>
           <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Nombre d'usagers concernes *</label>
+            <select
+              value={uploadNbUsagers}
+              onChange={(e) => setUploadNbUsagers(Number(e.target.value))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-ville-primary focus:border-transparent"
+            >
+              <option value={1}>1 usager (ex: Attestation de domicile)</option>
+              <option value={2}>2 usagers (ex: Attestation de concubinage)</option>
+            </select>
+            <p className="text-xs text-gray-400 mt-1">
+              {uploadNbUsagers === 2
+                ? "Les variables seront prefixees par usager1_ et usager2_ (ex: {{usager1_nom}}, {{usager2_nom}})."
+                : "Les variables de l'usager sont accessibles directement (ex: {{nom}}, {{prenom}})."}
+            </p>
+          </div>
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Fichier Word (.docx) *</label>
             <input
               type="file"
@@ -337,6 +360,7 @@ export default function ParametrageAttestations() {
                   )}
                   <p className="text-xs text-gray-400 mt-1">
                     Fichier : {t.fichier_original}
+                    {t.nb_usagers > 1 && <> | {t.nb_usagers} usagers</>}
                     {t.variables && t.variables.length > 0 && (
                       <> | Variables custom : {t.variables.join(", ")}</>
                     )}

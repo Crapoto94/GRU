@@ -13,11 +13,16 @@ export default function AttestationGenerate() {
 
   const [usagers, setUsagers] = useState<Usager[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
-  const [selectedUsager, setSelectedUsager] = useState(preselectedUsager);
   const [selectedTemplate, setSelectedTemplate] = useState("");
+  const [selectedUsager, setSelectedUsager] = useState(preselectedUsager);
+  const [selectedUsager2, setSelectedUsager2] = useState("");
   const [customData, setCustomData] = useState<Record<string, string>>({});
   const [generating, setGenerating] = useState(false);
   const [searchUsager, setSearchUsager] = useState("");
+  const [searchUsager2, setSearchUsager2] = useState("");
+
+  const activeTemplate = templates.find((t) => t.id === selectedTemplate);
+  const needUsager2 = activeTemplate?.nb_usagers === 2;
 
   useEffect(() => {
     attestationsApi.listTemplates().then((res) => setTemplates(res.data.rows));
@@ -49,15 +54,20 @@ export default function AttestationGenerate() {
       toast.error("Selectionnez un usager et un template");
       return;
     }
+    if (needUsager2 && !selectedUsager2) {
+      toast.error("Selectionnez le second usager pour ce template");
+      return;
+    }
     setGenerating(true);
     try {
       const res = await attestationsApi.generate({
         usager_id: selectedUsager,
+        usager2_id: needUsager2 ? selectedUsager2 : undefined,
         template_id: selectedTemplate,
         custom_data: Object.keys(customData).length > 0 ? customData : undefined,
       });
       toast.success("Attestation generee !");
-      navigate(`/attestations`);
+      navigate("/attestations");
       if (res.data.fichier_pdf) {
         attestationsApi.download(res.data.id).then((dl) => {
           const blob = new Blob([dl.data], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
@@ -79,7 +89,58 @@ export default function AttestationGenerate() {
     }
   };
 
-  const selectedUsagerData = usagers.find((u) => u.id === selectedUsager);
+  const renderUsagerSelector = (
+    label: string,
+    selectedId: string,
+    onSelect: (id: string) => void,
+    search: string,
+    onSearchChange: (v: string) => void
+  ) => {
+    const selected = usagers.find((u) => u.id === selectedId);
+    return (
+      <section>
+        <h2 className="text-lg font-semibold text-ville-primary mb-4">{label}</h2>
+        <input
+          type="text"
+          placeholder="Rechercher un usager..."
+          value={search}
+          onChange={(e) => onSearchChange(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm mb-3"
+        />
+        <div className="max-h-60 overflow-y-auto border border-gray-200 rounded-lg">
+          {usagers.length === 0 ? (
+            <p className="px-4 py-6 text-center text-sm text-gray-500">Aucun usager trouve</p>
+          ) : (
+            usagers.map((u) => (
+              <button
+                key={u.id}
+                type="button"
+                onClick={() => onSelect(u.id)}
+                className={`w-full text-left px-4 py-3 border-b border-gray-50 hover:bg-gray-50 text-sm flex items-center justify-between ${
+                  selectedId === u.id ? "bg-ville-light border-l-4 border-l-ville-primary" : ""
+                }`}
+              >
+                <div>
+                  <span className="font-medium">{formatPrenom(u.prenom)} {formatNom(u.nom)}</span>
+                  {u.ville && <span className="text-gray-500 ml-2">- {u.ville}</span>}
+                </div>
+                {selectedId === u.id && <FileText size={16} className="text-ville-primary" />}
+              </button>
+            ))
+          )}
+        </div>
+        {selected && (
+          <div className="mt-3 p-3 bg-ville-light rounded-lg text-sm">
+            <p className="font-medium">{selected.civilite} {formatPrenom(selected.prenom)} {formatNom(selected.nom)}</p>
+            <p className="text-gray-600">
+              {selected.Adresse || ""}
+              {selected.code_postal && selected.ville && `, ${selected.code_postal} ${selected.ville}`}
+            </p>
+          </div>
+        )}
+      </section>
+    );
+  };
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -92,60 +153,50 @@ export default function AttestationGenerate() {
 
       <form onSubmit={handleGenerate} className="bg-white rounded-xl shadow-sm p-6 space-y-6">
         <section>
-          <h2 className="text-lg font-semibold text-ville-primary mb-4">Selection de l'usager</h2>
-          <input
-            type="text"
-            placeholder="Rechercher un usager..."
-            value={searchUsager}
-            onChange={(e) => setSearchUsager(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm mb-3"
-          />
-          <div className="max-h-60 overflow-y-auto border border-gray-200 rounded-lg">
-            {usagers.length === 0 ? (
-              <p className="px-4 py-6 text-center text-sm text-gray-500">Aucun usager trouve</p>
-            ) : (
-              usagers.map((u) => (
-                <button
-                  key={u.id}
-                  type="button"
-                  onClick={() => setSelectedUsager(u.id)}
-                  className={`w-full text-left px-4 py-3 border-b border-gray-50 hover:bg-gray-50 text-sm flex items-center justify-between ${
-                    selectedUsager === u.id ? "bg-ville-light border-l-4 border-l-ville-primary" : ""
-                  }`}
-                >
-                  <div>
-                    <span className="font-medium">{formatPrenom(u.prenom)} {formatNom(u.nom)}</span>
-                    {u.ville && <span className="text-gray-500 ml-2">- {u.ville}</span>}
-                  </div>
-                  {selectedUsager === u.id && <FileText size={16} className="text-ville-primary" />}
-                </button>
-              ))
-            )}
-          </div>
-          {selectedUsagerData && (
-            <div className="mt-3 p-3 bg-ville-light rounded-lg text-sm">
-              <p className="font-medium">{selectedUsagerData.civilite} {formatPrenom(selectedUsagerData.prenom)} {formatNom(selectedUsagerData.nom)}</p>
-              <p className="text-gray-600">
-                {selectedUsagerData.Adresse || ""}
-                {selectedUsagerData.code_postal && selectedUsagerData.ville && `, ${selectedUsagerData.code_postal} ${selectedUsagerData.ville}`}
-              </p>
-            </div>
-          )}
-        </section>
-
-        <section>
           <h2 className="text-lg font-semibold text-ville-primary mb-4">Selection du template</h2>
           <select
             value={selectedTemplate}
-            onChange={(e) => setSelectedTemplate(e.target.value)}
+            onChange={(e) => {
+              setSelectedTemplate(e.target.value);
+              setSelectedUsager(preselectedUsager);
+              setSelectedUsager2("");
+            }}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
           >
             <option value="">-- Choisir un template --</option>
             {templates.map((t) => (
-              <option key={t.id} value={t.id}>{t.nom}</option>
+              <option key={t.id} value={t.id}>
+                {t.nom}{t.nb_usagers > 1 ? ` (${t.nb_usagers} usagers)` : ""}
+              </option>
             ))}
           </select>
+          {activeTemplate && (
+            <p className="text-xs text-gray-400 mt-1">
+              {activeTemplate.nb_usagers > 1
+                ? `Ce template concerne ${activeTemplate.nb_usagers} usagers. Les variables seront prefixees par usager1_ et usager2_.`
+                : "Variables de l'usager accessibles directement ({{nom}}, {{prenom}}...)."}
+            </p>
+          )}
         </section>
+
+        {selectedTemplate && (
+          <>
+            {renderUsagerSelector(
+              "Selection de l'usager principal",
+              selectedUsager,
+              setSelectedUsager,
+              searchUsager,
+              setSearchUsager
+            )}
+            {needUsager2 && renderUsagerSelector(
+              "Selection du second usager",
+              selectedUsager2,
+              setSelectedUsager2,
+              searchUsager2,
+              setSearchUsager2
+            )}
+          </>
+        )}
 
         {selectedTemplate && Object.keys(customData).length > 0 && (
           <section>
@@ -179,7 +230,7 @@ export default function AttestationGenerate() {
           </button>
           <button
             type="submit"
-            disabled={generating || !selectedUsager || !selectedTemplate}
+            disabled={generating || !selectedUsager || !selectedTemplate || (needUsager2 && !selectedUsager2)}
             className="flex items-center gap-2 bg-ville-primary text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition disabled:opacity-50 text-sm"
           >
             <FileText size={16} />

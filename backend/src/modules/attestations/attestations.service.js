@@ -68,12 +68,19 @@ const attestationService = {
     return attestation;
   },
 
-  async generate(usagerId, templateId, customData, user, ip) {
+  async generate(usagerId, templateId, customData, user, ip, usager2Id) {
     const usager = await usagerRepository.findById(usagerId);
     if (!usager) throw Object.assign(new Error("Usager non trouve"), { status: 404 });
 
     const template = await attestationRepository.findTemplateById(templateId);
     if (!template) throw Object.assign(new Error("Template non trouve"), { status: 404 });
+
+    const nbUsagers = template.nb_usagers || 1;
+    let usager2 = null;
+    if (nbUsagers === 2 && usager2Id) {
+      usager2 = await usagerRepository.findById(usager2Id);
+      if (!usager2) throw Object.assign(new Error("Second usager non trouve"), { status: 404 });
+    }
 
     const templatePath = path.join(TEMPLATES_DIR, template.fichier_original);
     if (!fs.existsSync(templatePath)) {
@@ -88,7 +95,21 @@ const attestationService = {
       delimiters: { start: "{{", end: "}}" },
     });
 
-    const mergeData = { ...prepareUsagerData(usager), ...(customData || {}) };
+    let mergeData;
+    if (nbUsagers === 2 && usager2) {
+      const u1 = prepareUsagerData(usager);
+      const u2 = prepareUsagerData(usager2);
+      mergeData = {};
+      for (const [key, val] of Object.entries(u1)) {
+        mergeData[`usager1_${key}`] = val;
+      }
+      for (const [key, val] of Object.entries(u2)) {
+        mergeData[`usager2_${key}`] = val;
+      }
+    } else {
+      mergeData = prepareUsagerData(usager);
+    }
+    Object.assign(mergeData, customData || {});
     doc.render(mergeData);
 
     const outputDocx = doc.getZip().generate({ type: "nodebuffer" });
@@ -99,11 +120,16 @@ const attestationService = {
     fs.mkdirSync(UPLOADS_DIR, { recursive: true });
     fs.writeFileSync(filePath, outputDocx);
 
+    const titreSuffixe = nbUsagers === 2 && usager2
+      ? `${usager.prenom} ${usager.nom} & ${usager2.prenom} ${usager2.nom}`
+      : `${usager.prenom} ${usager.nom}`;
+
     const attestation = await attestationRepository.create({
       id: attestationId,
       usager_id: usagerId,
+      usager2_id: nbUsagers === 2 ? usager2Id : null,
       template_id: templateId,
-      titre: `${template.nom} - ${usager.prenom} ${usager.nom}`,
+      titre: `${template.nom} - ${titreSuffixe}`,
       contenu_genere: mergeData,
       fichier_pdf: filename,
       statut: "genere",
@@ -113,7 +139,7 @@ const attestationService = {
 
     await logAcces(user, "GENERATE_ATTESTATION", "attestations", attestation.id, {
       template: template.nom,
-      usager: `${usager.prenom} ${usager.nom}`,
+      usager: titreSuffixe,
     }, ip);
 
     return attestation;
