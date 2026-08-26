@@ -11,9 +11,11 @@ interface Statuses {
   backend: ServiceStatus;
   database: ServiceStatus;
   api_ville: ServiceStatus;
+  database_info?: { database: string; user: string };
+  database_error?: string;
 }
 
-function StatusDot({ status, label }: { status: ServiceStatus; label: string }) {
+function StatusDot({ status, label, detail, error }: { status: ServiceStatus; label: string; detail?: string; error?: string }) {
   const colors: Record<ServiceStatus, string> = {
     ok: "bg-green-500",
     error: "bg-red-500",
@@ -23,7 +25,7 @@ function StatusDot({ status, label }: { status: ServiceStatus; label: string }) 
   };
   const tooltips: Record<ServiceStatus, string> = {
     ok: "Joignable",
-    error: "Injoignable",
+    error: error || "Injoignable",
     unknown: "Inconnu",
     loading: "Verification...",
     not_configured: "Non configure",
@@ -32,6 +34,7 @@ function StatusDot({ status, label }: { status: ServiceStatus; label: string }) 
     <div className="flex items-center gap-2" title={tooltips[status]}>
       <span className={`inline-block w-3 h-3 rounded-full ${colors[status]}`} />
       <span className="text-xs text-gray-600">{label}</span>
+      {detail && <span className="text-[10px] text-gray-400">({detail})</span>}
     </div>
   );
 }
@@ -57,6 +60,8 @@ export default function LoginPage() {
           backend: res.data.backend || "ok",
           database: res.data.database || "error",
           api_ville: res.data.api_ville || "unknown",
+          database_info: res.data.database_info,
+          database_error: res.data.database_error,
         });
       } catch {
         setStatuses((prev) => ({ ...prev, backend: "error" }));
@@ -163,7 +168,12 @@ export default function LoginPage() {
         <div className="mt-6 pt-4 border-t border-gray-100 space-y-1.5">
           <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-2">Etat des services</p>
           <StatusDot status={statuses.backend} label="Backend API" />
-          <StatusDot status={statuses.database} label="Base de donnees" />
+          <StatusDot
+            status={statuses.database}
+            label="Base de donnees"
+            detail={statuses.database_info ? `${statuses.database_info.user}@${statuses.database_info.database}` : undefined}
+            error={statuses.database_error}
+          />
           <StatusDot status={statuses.api_ville} label="API Ville" />
         </div>
       </div>

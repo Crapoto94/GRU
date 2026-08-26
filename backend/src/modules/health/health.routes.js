@@ -1,6 +1,5 @@
 const express = require("express");
 const axios = require("axios");
-const { pool } = require("../../config/pg_db");
 const router = express.Router();
 
 /**
@@ -31,18 +30,45 @@ router.get("/status", async (_req, res) => {
   const result = { backend: "ok", database: "error", api_ville: "unknown" };
 
   try {
+    const testPool = new (require("pg").Pool)({
+      host: process.env.POSTGRES_HOST,
+      port: parseInt(process.env.POSTGRES_PORT, 10) || 5432,
+      database: process.env.POSTGRES_DB,
+      user: process.env.POSTGRES_USER,
+      password: process.env.POSTGRES_PASSWORD,
+      connectionTimeoutMillis: 5000,
+      max: 1,
+    });
     const start = Date.now();
-    await pool.query("SELECT 1");
+    const pgResult = await testPool.query(
+      "SELECT current_database() as db, current_user as user_name"
+    );
     result.database = "ok";
     result.database_latency = Date.now() - start;
-  } catch {
+    result.database_info = {
+      database: pgResult.rows[0].db,
+      user: pgResult.rows[0].user_name,
+    };
+    await testPool.end();
+  } catch (err) {
     result.database = "error";
+    result.database_error = err.message;
   }
 
   try {
-    const configRes = await pool.query(
+    const configPool = new (require("pg").Pool)({
+      host: process.env.POSTGRES_HOST,
+      port: parseInt(process.env.POSTGRES_PORT, 10) || 5432,
+      database: process.env.POSTGRES_DB,
+      user: process.env.POSTGRES_USER,
+      password: process.env.POSTGRES_PASSWORD,
+      connectionTimeoutMillis: 5000,
+      max: 1,
+    });
+    const configRes = await configPool.query(
       `SELECT cle, valeur FROM "gru".config_params WHERE cle IN ('api_ville_url', 'api_ville_port', 'api_ville_token')`
     );
+    await configPool.end();
     const config = {};
     for (const r of configRes.rows) config[r.cle] = r.valeur;
 
