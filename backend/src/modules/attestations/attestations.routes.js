@@ -170,8 +170,81 @@ router.post("/templates/upload", upload.single("file"), async (req, res, next) =
 router.delete("/templates/:id", async (req, res, next) => {
   try {
     const attestationRepository = require("./attestations.repository");
-    await attestationRepository.removeTemplate(req.params.id);
+    const existing = await attestationRepository.findTemplateById(req.params.id);
+    if (!existing) throw Object.assign(new Error("Template non trouve"), { status: 404 });
+    await attestationRepository.updateTemplate(req.params.id, { actif: false });
+    const filePath = path.join(TEMPLATES_DIR, existing.fichier_original);
+    if (fs.existsSync(filePath)) {
+      try { fs.unlinkSync(filePath); } catch { /* ignore */ }
+    }
     res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * @openapi
+ * /api/v1/attestations/templates/{id}:
+ *   put:
+ *     tags: [Attestations]
+ *     summary: Modifier un template (nom, description, variables, nb_usagers, fichier)
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               nom:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               nb_usagers:
+ *                 type: integer
+ *               variables:
+ *                 type: string
+ *                 description: JSON array of variable names
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Template modifie
+ */
+router.put("/templates/:id", upload.single("file"), async (req, res, next) => {
+  try {
+    const attestationRepository = require("./attestations.repository");
+    const existing = await attestationRepository.findTemplateById(req.params.id);
+    if (!existing) throw Object.assign(new Error("Template non trouve"), { status: 404 });
+
+    const data = {};
+    if (req.body.nom !== undefined) data.nom = req.body.nom;
+    if (req.body.description !== undefined) data.description = req.body.description;
+    if (req.body.nb_usagers !== undefined) data.nb_usagers = parseInt(req.body.nb_usagers, 10) || 1;
+    if (req.body.variables !== undefined) {
+      try { data.variables = JSON.parse(req.body.variables); } catch { /* ignore */ }
+    }
+
+    if (req.file) {
+      const oldFilePath = path.join(TEMPLATES_DIR, existing.fichier_original);
+      if (fs.existsSync(oldFilePath)) {
+        try { fs.unlinkSync(oldFilePath); } catch { /* ignore */ }
+      }
+      data.fichier_original = req.file.filename;
+    }
+
+    if (Object.keys(data).length === 0) {
+      throw Object.assign(new Error("Aucune donnee a modifier"), { status: 400 });
+    }
+
+    const template = await attestationRepository.updateTemplate(req.params.id, data);
+    res.json(template.rows ? template.rows[0] : template);
   } catch (err) {
     next(err);
   }

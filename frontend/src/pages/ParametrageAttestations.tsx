@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Upload, FileText, Trash2, ChevronDown, ChevronRight, Info } from "lucide-react";
+import { Upload, FileText, Trash2, ChevronDown, ChevronRight, Info, Pencil } from "lucide-react";
 import toast from "react-hot-toast";
 import { attestationsApi } from "../services/api";
 import type { Template } from "../types";
@@ -41,6 +41,13 @@ export default function ParametrageAttestations() {
   const [uploading, setUploading] = useState(false);
   const [aideOuverte, setAideOuverte] = useState(false);
   const [varsOuvert, setVarsOuvert] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
+  const [editNom, setEditNom] = useState("");
+  const [editDesc, setEditDesc] = useState("");
+  const [editVars, setEditVars] = useState("");
+  const [editNbUsagers, setEditNbUsagers] = useState(1);
+  const [editFile, setEditFile] = useState<File | null>(null);
+  const [editing, setEditing] = useState(false);
 
   const loadTemplates = async () => {
     try {
@@ -94,11 +101,49 @@ export default function ParametrageAttestations() {
   const handleDelete = async (id: string, nom: string) => {
     if (!window.confirm(`Supprimer le template "${nom}" ?`)) return;
     try {
-      await attestationsApi.remove(id);
+      await attestationsApi.deleteTemplate(id);
       toast.success("Template supprime");
       loadTemplates();
     } catch {
       toast.error("Erreur lors de la suppression");
+    }
+  };
+
+  const openEdit = (t: Template) => {
+    setEditingTemplate(t);
+    setEditNom(t.nom);
+    setEditDesc(t.description || "");
+    setEditVars(t.variables?.join(", ") || "");
+    setEditNbUsagers(t.nb_usagers || 1);
+    setEditFile(null);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTemplate || !editNom) {
+      toast.error("Le nom est requis");
+      return;
+    }
+    setEditing(true);
+    const formData = new FormData();
+    formData.append("nom", editNom);
+    formData.append("description", editDesc);
+    formData.append("nb_usagers", String(editNbUsagers));
+    if (editVars.trim()) {
+      formData.append("variables", JSON.stringify(editVars.split(",").map((v) => v.trim()).filter(Boolean)));
+    }
+    if (editFile) {
+      formData.append("file", editFile);
+    }
+    try {
+      await attestationsApi.updateTemplate(editingTemplate.id, formData);
+      toast.success("Template mis a jour");
+      setEditingTemplate(null);
+      loadTemplates();
+    } catch {
+      toast.error("Erreur lors de la mise a jour");
+    } finally {
+      setEditing(false);
     }
   };
 
@@ -371,6 +416,13 @@ export default function ParametrageAttestations() {
                   </p>
                 </div>
                 <button
+                  onClick={() => openEdit(t)}
+                  className="p-1 text-ville-primary hover:bg-blue-50 rounded shrink-0"
+                  title="Modifier"
+                >
+                  <Pencil size={16} />
+                </button>
+                <button
                   onClick={() => handleDelete(t.id, t.nom)}
                   className="p-1 text-red-500 hover:bg-red-50 rounded shrink-0"
                   title="Supprimer"
@@ -382,6 +434,86 @@ export default function ParametrageAttestations() {
           </div>
         )}
       </div>
+
+      {/* === MODAL EDITION TEMPLATE === */}
+      {editingTemplate && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
+            <h2 className="text-lg font-bold text-ville-dark mb-4">Modifier le template</h2>
+            <form onSubmit={handleEditSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nom du template *</label>
+                <input
+                  type="text"
+                  value={editNom}
+                  onChange={(e) => setEditNom(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-ville-primary focus:border-transparent"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <input
+                  type="text"
+                  value={editDesc}
+                  onChange={(e) => setEditDesc(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-ville-primary focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre d'usagers</label>
+                <select
+                  value={editNbUsagers}
+                  onChange={(e) => setEditNbUsagers(Number(e.target.value))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-ville-primary focus:border-transparent"
+                >
+                  <option value={1}>1 usager</option>
+                  <option value={2}>2 usagers</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Variables supplementaires</label>
+                <input
+                  type="text"
+                  value={editVars}
+                  onChange={(e) => setEditVars(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-ville-primary focus:border-transparent"
+                  placeholder="Ex: motif, reference_dossier"
+                />
+                <p className="text-xs text-gray-400 mt-1">Separez par des virgules.</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Remplacer le fichier .docx (optionnel)</label>
+                <input
+                  type="file"
+                  accept=".docx"
+                  onChange={(e) => setEditFile(e.target.files?.[0] || null)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:bg-ville-primary file:text-white file:cursor-pointer"
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  Fichier actuel : {editingTemplate.fichier_original}
+                </p>
+              </div>
+              <div className="flex gap-2 justify-end pt-4 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => setEditingTemplate(null)}
+                  className="px-5 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition text-sm"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={editing || !editNom}
+                  className="flex items-center gap-2 bg-ville-primary text-white px-5 py-2 rounded-lg hover:bg-blue-700 transition disabled:opacity-50 text-sm"
+                >
+                  {editing ? "Enregistrement..." : "Enregistrer"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

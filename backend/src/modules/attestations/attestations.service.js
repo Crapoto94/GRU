@@ -34,17 +34,11 @@ function prepareUsagerData(usager) {
     email: usager.email || "",
     telephone: usager.telephone || "",
     mobile: usager.mobile || "",
-    adresse_complete: usager.Adresse || "",
+    adresse_complete: usager.Adresse || usager.adresse || "",
     complement_adresse: usager.complement_adresse || "",
     code_postal: usager.code_postal || "",
     ville: usager.ville || "",
     pays: usager.pays || "France",
-    date_du_jour: new Date().toLocaleDateString("fr-FR"),
-    date_du_jour_long: new Date().toLocaleDateString("fr-FR", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    }),
   };
 }
 
@@ -116,6 +110,12 @@ const attestationService = {
     } else {
       mergeData = prepareUsagerData(usager);
     }
+    mergeData.date_du_jour = new Date().toLocaleDateString("fr-FR");
+    mergeData.date_du_jour_long = new Date().toLocaleDateString("fr-FR", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
     Object.assign(mergeData, customData || {});
     doc.render(mergeData);
 

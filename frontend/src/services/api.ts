@@ -36,6 +36,11 @@ export const attestationsApi = {
     api.post<Template>("/api/v1/attestations/templates/upload", formData, {
       headers: { "Content-Type": "multipart/form-data" },
     }),
+  updateTemplate: (id: string, formData: FormData) =>
+    api.put<Template>(`/api/v1/attestations/templates/${id}`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
+  deleteTemplate: (id: string) => api.delete(`/api/v1/attestations/templates/${id}`),
   list: (params?: { statut?: string; usager_id?: string }) =>
     api.get<PaginatedResponse<Attestation>>("/api/v1/attestations", { params }),
   getById: (id: string) => api.get<Attestation>(`/api/v1/attestations/${id}`),
