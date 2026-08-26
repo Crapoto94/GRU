@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Save, ArrowLeft, Search, AlertTriangle, CheckCircle } from "lucide-react";
 import toast from "react-hot-toast";
@@ -24,6 +24,117 @@ interface AdresseSuggestion {
   postcode?: string;
   street?: string;
   numero?: string;
+}
+
+interface CommuneSuggestion {
+  nom: string;
+  code: string;
+  departement?: { nom: string; code: string };
+}
+
+interface PaysSuggestion {
+  name: string;
+  cca2: string;
+}
+
+function AutocompleteField({
+  label,
+  value,
+  onChange,
+  onSelect,
+  fetchSuggestions,
+  placeholder,
+  required = false,
+  disabled = false,
+  className = "",
+}: {
+  label: string;
+  value: string;
+  onChange: (val: string) => void;
+  onSelect: (val: string) => void;
+  fetchSuggestions: (q: string) => Promise<{ label: string; value: string }[]>;
+  placeholder?: string;
+  required?: boolean;
+  disabled?: boolean;
+  className?: string;
+}) {
+  const [suggestions, setSuggestions] = useState<{ label: string; value: string }[]>([]);
+  const [showDrop, setShowDrop] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setShowDrop(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleChange = (val: string) => {
+    onChange(val);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (val.length < 2) {
+      setSuggestions([]);
+      setShowDrop(false);
+      return;
+    }
+    setLoading(true);
+    timerRef.current = setTimeout(async () => {
+      try {
+        const results = await fetchSuggestions(val);
+        setSuggestions(results);
+        setShowDrop(results.length > 0);
+      } catch {
+        setSuggestions([]);
+      } finally {
+        setLoading(false);
+      }
+    }, 300);
+  };
+
+  const handleSelect = (s: { label: string; value: string }) => {
+    onSelect(s.value);
+    setShowDrop(false);
+    setSuggestions([]);
+  };
+
+  return (
+    <div className={className}>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      <div className="relative">
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => handleChange(e.target.value)}
+          placeholder={placeholder}
+          disabled={disabled}
+          onFocus={() => suggestions.length > 0 && setShowDrop(true)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ville-primary focus:border-transparent text-sm disabled:bg-gray-50"
+        />
+        {loading && <span className="absolute right-3 top-2.5 text-xs text-gray-400">...</span>}
+        {showDrop && suggestions.length > 0 && (
+          <div className="absolute z-20 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-56 overflow-y-auto">
+            {suggestions.map((s, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => handleSelect(s)}
+                className="w-full text-left px-4 py-2 hover:bg-ville-light text-sm border-b border-gray-50 last:border-0"
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function InputField({
@@ -328,20 +439,39 @@ export default function UsagerForm() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
             <InputField label="Date de naissance" value={form.date_naissance || ""} onChange={set("date_naissance")} type="date" required />
-            <InputField label="Lieu de naissance" value={form.lieu_naissance || ""} onChange={set("lieu_naissance")} />
+            <AutocompleteField
+              label="Lieu de naissance"
+              value={form.lieu_naissance || ""}
+              onChange={set("lieu_naissance")}
+              onSelect={set("lieu_naissance")}
+              fetchSuggestions={async (q) => {
+                const res = await fetch(`https://geo.api.gouv.fr/communes?nom=${encodeURIComponent(q)}&fields=nom,code,departement&limit=8`);
+                const data: CommuneSuggestion[] = await res.json();
+                return data.map((c) => ({
+                  label: c.departement ? `${c.nom} (${c.departement.nom})` : c.nom,
+                  value: c.nom,
+                }));
+              }}
+              placeholder="Rechercher une commune..."
+            />
             <InputField label="Nationalite" value={form.nationalite || ""} onChange={set("nationalite")} />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Pays de naissance</label>
-              <select
-                value={form.pays_naissance || "France"}
-                onChange={(e) => set("pays_naissance")(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-              >
-                {PAYS.map((p) => <option key={p} value={p}>{p}</option>)}
-              </select>
-            </div>
+            <AutocompleteField
+              label="Pays de naissance"
+              value={form.pays_naissance || "France"}
+              onChange={set("pays_naissance")}
+              onSelect={set("pays_naissance")}
+              fetchSuggestions={async (q) => {
+                const res = await fetch(`https://restcountries.com/v3.1/name/${encodeURIComponent(q)}?fields=name,cca2`);
+                const data: PaysSuggestion[] = await res.json();
+                return data.map((p) => ({
+                  label: p.name,
+                  value: p.name,
+                }));
+              }}
+              placeholder="Rechercher un pays..."
+            />
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Situation familiale</label>
               <select
