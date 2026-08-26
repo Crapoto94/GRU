@@ -232,10 +232,14 @@ export default function UsagerForm() {
   }, []);
 
   const selectAdresse = (s: AdresseSuggestion) => {
-    const rue = [s.numero, s.street].filter(Boolean).join(" ");
+    const street = s.street || "";
+    const num = s.numero || "";
+    const rue = num && !street.startsWith(num)
+      ? `${num} ${street}`
+      : street || num;
     setForm((prev) => ({
       ...prev,
-      Adresse: rue || s.label || "",
+      Adresse: rue,
       code_postal: s.postcode || "",
       ville: s.city || "",
     }));

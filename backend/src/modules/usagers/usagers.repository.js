@@ -4,15 +4,20 @@ const TABLE = `"${SCHEMA_NAME}".usagers`;
 
 const usagerRepository = {
   async findAll({ archived = false, search = "", limit = 50, offset = 0 } = {}) {
-    let query = `SELECT *, adresse as "Adresse" FROM ${TABLE} WHERE archived = $1`;
+    const ATTESTATIONS = `"${SCHEMA_NAME}".attestations`;
+    let query = `SELECT u.*, u.adresse as "Adresse",
+      (SELECT COUNT(*)::int FROM ${ATTESTATIONS} a
+       WHERE a.usager_id = u.id OR a.usager2_id = u.id OR a.usager3_id = u.id
+      ) as attestation_count
+      FROM ${TABLE} u WHERE u.archived = $1`;
     const params = [archived];
     if (search) {
       params.push(`%${search}%`);
       params.push(`%${search}%`);
       params.push(`%${search}%`);
-      query += ` AND (nom ILIKE $${params.length - 2} OR prenom ILIKE $${params.length - 1} OR email ILIKE $${params.length})`;
+      query += ` AND (u.nom ILIKE $${params.length - 2} OR u.prenom ILIKE $${params.length - 1} OR u.email ILIKE $${params.length})`;
     }
-    query += ` ORDER BY created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+    query += ` ORDER BY u.created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
     params.push(limit, offset);
     const rows = await db.all(query, params);
     const countResult = await db.get(

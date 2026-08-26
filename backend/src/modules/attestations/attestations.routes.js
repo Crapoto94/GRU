@@ -186,6 +186,45 @@ router.delete("/templates/:id", async (req, res, next) => {
 
 /**
  * @openapi
+ * /api/v1/attestations/templates/{id}/download:
+ *   get:
+ *     tags: [Attestations]
+ *     summary: Telecharger le fichier .docx d'un template
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Fichier Word
+ */
+router.get("/templates/:id/download", async (req, res, next) => {
+  try {
+    const attestationRepository = require("./attestations.repository");
+    const template = await attestationRepository.findTemplateById(req.params.id);
+    if (!template) throw Object.assign(new Error("Template non trouve"), { status: 404 });
+    const filePath = path.join(TEMPLATES_DIR, template.fichier_original);
+    if (!fs.existsSync(filePath)) {
+      throw Object.assign(new Error("Fichier template non trouve sur le serveur"), { status: 404 });
+    }
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    );
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${template.fichier_original}"`
+    );
+    fs.createReadStream(filePath).pipe(res);
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * @openapi
  * /api/v1/attestations/templates/{id}:
  *   put:
  *     tags: [Attestations]

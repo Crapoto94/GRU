@@ -23,6 +23,7 @@ export interface Usager {
   date_archivage: string | null;
   motif_archivage: string | null;
   created_by: string | null;
+  attestation_count: number;
   created_at: string;
   updated_at: string;
 }

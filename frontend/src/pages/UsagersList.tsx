@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Search, Plus, Archive, RotateCcw, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Plus, Archive, RotateCcw, Trash2, ChevronLeft, ChevronRight, FileText, X, Download } from "lucide-react";
 import toast from "react-hot-toast";
 import { formatNom, formatPrenom } from "../utils/format";
-import { usagersApi } from "../services/api";
-import type { Usager } from "../types";
+import { usagersApi, attestationsApi } from "../services/api";
+import type { Usager, Attestation } from "../types";
 
 export default function UsagersList() {
   const navigate = useNavigate();
@@ -16,6 +16,9 @@ export default function UsagersList() {
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(false);
   const limit = 20;
+
+  const [attestationsModal, setAttestationsModal] = useState<{ usager: Usager; attestations: Attestation[] } | null>(null);
+  const [loadingAttestations, setLoadingAttestations] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -66,6 +69,35 @@ export default function UsagersList() {
     }
   };
 
+  const openAttestations = async (u: Usager) => {
+    setLoadingAttestations(true);
+    try {
+      const res = await attestationsApi.list({ usager_id: u.id });
+      setAttestationsModal({ usager: u, attestations: res.data.rows });
+    } catch {
+      toast.error("Erreur chargement attestations");
+    } finally {
+      setLoadingAttestations(false);
+    }
+  };
+
+  const handleDownload = async (id: string) => {
+    try {
+      const res = await attestationsApi.download(id);
+      const blob = new Blob([res.data], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Erreur lors du telechargement");
+    }
+  };
+
   const totalPages = Math.ceil(total / limit);
 
   return (
@@ -112,15 +144,16 @@ export default function UsagersList() {
               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Email</th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Telephone</th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Ville</th>
+              <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase">Attestations</th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Statut RGPD</th>
               <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {loading ? (
-              <tr><td colSpan={7} className="px-6 py-12 text-center text-gray-500">Chargement...</td></tr>
+              <tr><td colSpan={8} className="px-6 py-12 text-center text-gray-500">Chargement...</td></tr>
             ) : usagers.length === 0 ? (
-              <tr><td colSpan={7} className="px-6 py-12 text-center text-gray-500">Aucun usager trouve</td></tr>
+              <tr><td colSpan={8} className="px-6 py-12 text-center text-gray-500">Aucun usager trouve</td></tr>
             ) : (
               usagers.map((u) => (
                 <motion.tr
@@ -135,6 +168,19 @@ export default function UsagersList() {
                   <td className="px-6 py-4 text-sm text-gray-600">{u.email || "-"}</td>
                   <td className="px-6 py-4 text-sm text-gray-600">{u.mobile || u.telephone || "-"}</td>
                   <td className="px-6 py-4 text-sm text-gray-600">{u.ville || "-"}</td>
+                  <td className="px-6 py-4 text-sm text-center" onClick={(e) => e.stopPropagation()}>
+                    {u.attestation_count > 0 ? (
+                      <button
+                        onClick={() => openAttestations(u)}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-ville-primary/10 text-ville-primary hover:bg-ville-primary/20 transition cursor-pointer"
+                      >
+                        <FileText size={12} />
+                        {u.attestation_count}
+                      </button>
+                    ) : (
+                      <span className="text-gray-300 text-xs">-</span>
+                    )}
+                  </td>
                   <td className="px-6 py-4 text-sm">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                       u.consentement_rgpd ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
@@ -187,6 +233,59 @@ export default function UsagersList() {
           </div>
         )}
       </div>
+
+      {/* MODAL ATTESTATIONS */}
+      {attestationsModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <div>
+                <h2 className="text-lg font-bold text-ville-dark">
+                  Attestations de {attestationsModal.usager.prenom} {attestationsModal.usager.nom}
+                </h2>
+                <p className="text-sm text-gray-500">{attestationsModal.attestations.length} attestation(s)</p>
+              </div>
+              <button onClick={() => setAttestationsModal(null)} className="p-2 hover:bg-gray-100 rounded-lg">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6">
+              {loadingAttestations ? (
+                <p className="text-center text-gray-500 py-8">Chargement...</p>
+              ) : attestationsModal.attestations.length === 0 ? (
+                <p className="text-center text-gray-500 py-8">Aucune attestation</p>
+              ) : (
+                <div className="divide-y divide-gray-100">
+                  {attestationsModal.attestations.map((a) => (
+                    <div key={a.id} className="flex items-center gap-4 py-3 first:pt-0 last:pb-0">
+                      <FileText className="text-ville-primary shrink-0" size={18} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-ville-dark truncate">{a.titre}</p>
+                        <p className="text-xs text-gray-500">
+                          {a.template_nom}
+                          {a.date_generation && <> - {new Date(a.date_generation).toLocaleDateString("fr-FR")}</>}
+                        </p>
+                      </div>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium shrink-0 ${
+                        a.statut === "genere" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"
+                      }`}>{a.statut}</span>
+                      {a.fichier_pdf && (
+                        <button
+                          onClick={() => handleDownload(a.id)}
+                          className="p-1 text-ville-primary hover:bg-blue-50 rounded shrink-0"
+                          title="Telecharger"
+                        >
+                          <Download size={16} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Upload, FileText, Trash2, ChevronDown, ChevronRight, Info, Pencil, Plus, X } from "lucide-react";
+import { Upload, FileText, Trash2, ChevronDown, ChevronRight, Info, Pencil, Plus, X, Download } from "lucide-react";
 import toast from "react-hot-toast";
 import { attestationsApi } from "../services/api";
 import type { Template } from "../types";
@@ -168,6 +168,23 @@ export default function ParametrageAttestations() {
       loadTemplates();
     } catch {
       toast.error("Erreur lors de la suppression");
+    }
+  };
+
+  const handleDownloadTemplate = async (id: string) => {
+    try {
+      const res = await attestationsApi.downloadTemplate(id);
+      const blob = new Blob([res.data], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Erreur lors du telechargement");
     }
   };
 
@@ -432,6 +449,13 @@ export default function ParametrageAttestations() {
                     Cree le {new Date(t.created_at).toLocaleDateString("fr-FR")}
                   </p>
                 </div>
+                <button
+                  onClick={() => handleDownloadTemplate(t.id)}
+                  className="p-1 text-gray-500 hover:text-ville-primary hover:bg-blue-50 rounded shrink-0"
+                  title="Telecharger le template"
+                >
+                  <Download size={16} />
+                </button>
                 <button
                   onClick={() => openEdit(t)}
                   className="p-1 text-ville-primary hover:bg-blue-50 rounded shrink-0"

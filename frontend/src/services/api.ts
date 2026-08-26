@@ -41,6 +41,8 @@ export const attestationsApi = {
       headers: { "Content-Type": "multipart/form-data" },
     }),
   deleteTemplate: (id: string) => api.delete(`/api/v1/attestations/templates/${id}`),
+  downloadTemplate: (id: string) =>
+    api.get(`/api/v1/attestations/templates/${id}/download`, { responseType: "blob" }),
   list: (params?: { statut?: string; usager_id?: string }) =>
     api.get<PaginatedResponse<Attestation>>("/api/v1/attestations", { params }),
   getById: (id: string) => api.get<Attestation>(`/api/v1/attestations/${id}`),
