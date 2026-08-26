@@ -15,7 +15,9 @@ const usagerRepository = {
       params.push(`%${search}%`);
       params.push(`%${search}%`);
       params.push(`%${search}%`);
-      query += ` AND (u.nom ILIKE $${params.length - 2} OR u.prenom ILIKE $${params.length - 1} OR u.email ILIKE $${params.length})`;
+      params.push(`%${search}%`);
+      params.push(`%${search}%`);
+      query += ` AND (u.nom ILIKE $${params.length - 4} OR u.prenom ILIKE $${params.length - 3} OR u.email ILIKE $${params.length - 2} OR u.telephone ILIKE $${params.length - 1} OR u.mobile ILIKE $${params.length})`;
     }
     query += ` ORDER BY u.created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
     params.push(limit, offset);
