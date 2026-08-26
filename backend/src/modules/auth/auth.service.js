@@ -11,7 +11,7 @@ const authService = {
     const valid = await authRepository.comparePassword(password, user.password_hash);
     if (!valid) throw Object.assign(new Error("Identifiants invalides"), { status: 401 });
     const token = authRepository.generateToken(user);
-    await logAcces(user.id, "LOGIN", "users", user.id, { login: user.login }, ip);
+    await logAcces(user.login, "LOGIN", "users", user.id, { login: user.login }, ip);
     return {
       token,
       user: { id: user.id, login: user.login, nom: user.nom, prenom: user.prenom, email: user.email, role: user.role },
@@ -46,7 +46,7 @@ const authService = {
       user = result.rows[0];
     }
     const token = authRepository.generateToken(user);
-    await logAcces(user.id, "LOGIN_AD", "users", user.id, { login: user.login }, ip);
+    await logAcces(user.login, "LOGIN_AD", "users", user.id, { login: user.login }, ip);
     return {
       token,
       user: { id: user.id, login: user.login, nom: user.nom, prenom: user.prenom, email: user.email, role: user.role },
@@ -57,7 +57,7 @@ const authService = {
     const existing = await authRepository.findByLogin(data.login);
     if (existing) throw Object.assign(new Error("Ce login est deja utilise"), { status: 409 });
     const user = await authRepository.create(data);
-    await logAcces(user.id, "REGISTER", "users", user.id, { login: user.login }, ip);
+    await logAcces(data.login, "REGISTER", "users", user.id, { login: user.login }, ip);
     return user;
   },
 
@@ -77,7 +77,7 @@ const authService = {
     const valid = await authRepository.comparePassword(currentPassword, fullUser.password_hash);
     if (!valid) throw Object.assign(new Error("Mot de passe actuel incorrect"), { status: 401 });
     await authRepository.updatePassword(userId, newPassword);
-    await logAcces(userId, "CHANGE_PASSWORD", "users", userId, {}, null);
+    await logAcces(user.login, "CHANGE_PASSWORD", "users", userId, {}, null);
   },
 };
 

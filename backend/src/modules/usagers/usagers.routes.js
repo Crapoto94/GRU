@@ -142,7 +142,7 @@ router.post("/", async (req, res, next) => {
   try {
     const usager = await usagerService.create(
       req.body,
-      req.user?.sub || "system",
+      req.user?.login || "system",
       req.ip
     );
     res.status(201).json(usager);
@@ -173,7 +173,7 @@ router.put("/:id", async (req, res, next) => {
     const usager = await usagerService.update(
       req.params.id,
       req.body,
-      req.user?.sub || "system",
+      req.user?.login || "system",
       req.ip
     );
     res.json(usager);
@@ -212,7 +212,7 @@ router.post("/:id/archive", async (req, res, next) => {
     const usager = await usagerService.archive(
       req.params.id,
       req.body.motif,
-      req.user?.sub || "system",
+      req.user?.login || "system",
       req.ip
     );
     res.json(usager);
@@ -242,7 +242,7 @@ router.post("/:id/restore", async (req, res, next) => {
   try {
     const usager = await usagerService.restore(
       req.params.id,
-      req.user?.sub || "system",
+      req.user?.login || "system",
       req.ip
     );
     res.json(usager);
@@ -270,7 +270,7 @@ router.post("/:id/restore", async (req, res, next) => {
  */
 router.delete("/:id", async (req, res, next) => {
   try {
-    await usagerService.remove(req.params.id, req.user?.sub || "system", req.ip);
+    await usagerService.remove(req.params.id, req.user?.login || "system", req.ip);
     res.status(204).send();
   } catch (err) {
     next(err);

@@ -35,7 +35,7 @@ const usersService = require("./users.service");
  */
 router.post("/create-from-ad", async (req, res, next) => {
   try {
-    const user = await usersService.createFromAD(req.body, req.user?.sub, req.ip);
+    const user = await usersService.createFromAD(req.body, req.user?.login, req.ip);
     res.status(201).json(user);
   } catch (err) {
     next(err);
@@ -140,7 +140,7 @@ router.get("/:id", async (req, res, next) => {
  */
 router.post("/", async (req, res, next) => {
   try {
-    const user = await usersService.create(req.body, req.user?.sub, req.ip);
+    const user = await usersService.create(req.body, req.user?.login, req.ip);
     res.status(201).json(user);
   } catch (err) {
     next(err);
@@ -167,7 +167,7 @@ router.post("/", async (req, res, next) => {
  */
 router.put("/:id", async (req, res, next) => {
   try {
-    const user = await usersService.update(req.params.id, req.body, req.user?.sub, req.ip);
+    const user = await usersService.update(req.params.id, req.body, req.user?.login, req.ip);
     res.json(user);
   } catch (err) {
     next(err);
@@ -194,7 +194,7 @@ router.put("/:id", async (req, res, next) => {
  */
 router.delete("/:id", async (req, res, next) => {
   try {
-    await usersService.remove(req.params.id, req.user?.sub, req.ip);
+    await usersService.remove(req.params.id, req.user?.login, req.ip);
     res.status(204).send();
   } catch (err) {
     next(err);
@@ -231,7 +231,7 @@ router.delete("/:id", async (req, res, next) => {
  */
 router.post("/:id/reset-password", async (req, res, next) => {
   try {
-    await usersService.resetPassword(req.params.id, req.body.password, req.user?.sub, req.ip);
+    await usersService.resetPassword(req.params.id, req.body.password, req.user?.login, req.ip);
     res.json({ message: "Mot de passe reinitialise" });
   } catch (err) {
     next(err);

@@ -266,7 +266,7 @@ router.post("/generate", async (req, res, next) => {
       usager_id,
       template_id,
       custom_data,
-      req.user?.sub || "system",
+      req.user?.login || "system",
       req.ip
     );
     res.status(201).json(attestation);
@@ -334,7 +334,7 @@ router.get("/:id/download", async (req, res, next) => {
  */
 router.delete("/:id", async (req, res, next) => {
   try {
-    await attestationService.remove(req.params.id, req.user?.sub || "system", req.ip);
+    await attestationService.remove(req.params.id, req.user?.login || "system", req.ip);
     res.status(204).send();
   } catch (err) {
     next(err);
