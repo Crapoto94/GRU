@@ -19,7 +19,7 @@ function prepareUsagerData(usager) {
     nom_complet: `${usager.civilite || ""} ${usager.prenom || ""} ${usager.nom || ""}`.trim(),
     nom_usage: usager.nom_usage ? `(${usager.nom_usage})` : "",
     ne: isMale ? "ne" : "nee",
-    sexe: isMale ? "Masculin" : "Feminin",
+    sexe: isMale ? "masculin" : "féminin",
     date_naissance: usager.date_naissance
       ? new Date(usager.date_naissance).toLocaleDateString("fr-FR")
       : "",

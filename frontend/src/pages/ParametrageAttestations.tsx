@@ -7,7 +7,7 @@ import type { Template } from "../types";
 const VARIABLES_USAGER = [
   { nom: "civilite", description: "Civilite de l'usager (M., Mme)", exemple: "M." },
   { nom: "ne", description: "\"ne\" si masculin, \"nee\" si feminin", exemple: "nee" },
-  { nom: "sexe", description: "\"Masculin\" ou \"Feminin\"", exemple: "Masculin" },
+  { nom: "sexe", description: "\"masculin\" ou \"féminin\"", exemple: "masculin" },
   { nom: "nom", description: "Nom de famille de l'usager", exemple: "DUPONT" },
   { nom: "prenom", description: "Prenom de l'usager", exemple: "Jean" },
   { nom: "nom_complet", description: "Civilite + Prenom + Nom (genere automatiquement)", exemple: "M. Jean DUPONT" },
