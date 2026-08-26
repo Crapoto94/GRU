@@ -1,9 +1,40 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Lock, User, Monitor, Database } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuth } from "../contexts/AuthContext";
 import api from "../services/api";
+
+type ServiceStatus = "ok" | "error" | "unknown" | "loading" | "not_configured";
+
+interface Statuses {
+  backend: ServiceStatus;
+  database: ServiceStatus;
+  api_ville: ServiceStatus;
+}
+
+function StatusDot({ status, label }: { status: ServiceStatus; label: string }) {
+  const colors: Record<ServiceStatus, string> = {
+    ok: "bg-green-500",
+    error: "bg-red-500",
+    unknown: "bg-gray-400",
+    loading: "bg-yellow-400 animate-pulse",
+    not_configured: "bg-gray-300",
+  };
+  const tooltips: Record<ServiceStatus, string> = {
+    ok: "Joignable",
+    error: "Injoignable",
+    unknown: "Inconnu",
+    loading: "Verification...",
+    not_configured: "Non configure",
+  };
+  return (
+    <div className="flex items-center gap-2" title={tooltips[status]}>
+      <span className={`inline-block w-3 h-3 rounded-full ${colors[status]}`} />
+      <span className="text-xs text-gray-600">{label}</span>
+    </div>
+  );
+}
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -12,6 +43,29 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<"local" | "ad">("local");
+  const [statuses, setStatuses] = useState<Statuses>({
+    backend: "loading",
+    database: "loading",
+    api_ville: "loading",
+  });
+
+  useEffect(() => {
+    const checkStatus = async () => {
+      try {
+        const res = await api.get("/api/v1/health/status");
+        setStatuses({
+          backend: res.data.backend || "ok",
+          database: res.data.database || "error",
+          api_ville: res.data.api_ville || "unknown",
+        });
+      } catch {
+        setStatuses((prev) => ({ ...prev, backend: "error" }));
+      }
+    };
+    checkStatus();
+    const interval = setInterval(checkStatus, 15000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,6 +159,13 @@ export default function LoginPage() {
             {loading ? "Connexion..." : "Se connecter"}
           </button>
         </form>
+
+        <div className="mt-6 pt-4 border-t border-gray-100 space-y-1.5">
+          <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-2">Etat des services</p>
+          <StatusDot status={statuses.backend} label="Backend API" />
+          <StatusDot status={statuses.database} label="Base de donnees" />
+          <StatusDot status={statuses.api_ville} label="API Ville" />
+        </div>
       </div>
     </div>
   );
