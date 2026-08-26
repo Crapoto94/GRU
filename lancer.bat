@@ -25,9 +25,9 @@ if errorlevel 1 (
 
 echo [3/3] Demarrage...
 echo.
-echo --- Backend (port 3000) ---
-echo --- Frontend (port 5173) ---
-echo --- Swagger: http://localhost:3000/api-docs ---
+echo --- Backend (port 3221) ---
+echo --- Frontend (port 3220) ---
+echo --- Swagger: http://localhost:3221/api-docs ---
 echo.
 
 cd /d "%~dp0"
@@ -37,9 +37,9 @@ start "GRU Frontend" cmd /c "cd frontend && npm run dev"
 
 echo.
 echo Application lancee !
-echo   Frontend: http://localhost:5173
-echo   Backend:  http://localhost:3000
-echo   Swagger:  http://localhost:3000/api-docs
+echo   Frontend: http://localhost:3220
+echo   Backend:  http://localhost:3221
+echo   Swagger:  http://localhost:3221/api-docs
 echo.
 echo Fermez cette fenetre ou appuyez sur Ctrl+C dans les terminaux pour arreter.
 pause

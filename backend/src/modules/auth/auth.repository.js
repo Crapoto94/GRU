@@ -8,7 +8,7 @@ const TABLE = `"${SCHEMA_NAME}".users`;
 
 const authRepository = {
   async findByLogin(login) {
-    return db.get(`SELECT * FROM ${TABLE} WHERE login = $1`, [login]);
+    return db.get(`SELECT * FROM ${TABLE} WHERE LOWER(login) = LOWER($1)`, [login]);
   },
 
   async findById(id) {

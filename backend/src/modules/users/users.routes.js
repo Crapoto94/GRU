@@ -201,4 +201,41 @@ router.delete("/:id", async (req, res, next) => {
   }
 });
 
+/**
+ * @openapi
+ * /api/v1/users/{id}/reset-password:
+ *   post:
+ *     tags: [Users]
+ *     summary: Reinitialiser le mot de passe d'un utilisateur
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [password]
+ *             properties:
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Mot de passe reinitialise
+ */
+router.post("/:id/reset-password", async (req, res, next) => {
+  try {
+    await usersService.resetPassword(req.params.id, req.body.password, req.user?.sub, req.ip);
+    res.json({ message: "Mot de passe reinitialise" });
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;

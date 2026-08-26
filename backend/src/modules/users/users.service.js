@@ -19,6 +19,7 @@ const usersService = {
     if (!["utilisateur", "administrateur"].includes(data.role)) {
       throw Object.assign(new Error("Role invalide"), { status: 400 });
     }
+    data.login = data.login.toLowerCase();
     const user = await usersRepository.create(data);
     await logAcces(adminUser, "CREATE_USER", "users", user.id, { login: user.login }, ip);
     return user;
@@ -77,6 +78,15 @@ const usersService = {
     await this.getById(id);
     await usersRepository.remove(id);
     await logAcces(adminUser, "DELETE_USER", "users", id, {}, ip);
+  },
+
+  async resetPassword(id, newPassword, adminUser, ip) {
+    await this.getById(id);
+    if (!newPassword || newPassword.length < 4) {
+      throw Object.assign(new Error("Le mot de passe doit faire au moins 4 caracteres"), { status: 400 });
+    }
+    await usersRepository.update(id, { password: newPassword });
+    await logAcces(adminUser, "RESET_PASSWORD", "users", id, {}, ip);
   },
 };
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Plus, Edit, Trash2, Shield, UserCheck, Search, X, Loader2 } from "lucide-react";
+import { Plus, Edit, Trash2, Shield, UserCheck, Search, X, Loader2, KeyRound } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../services/api";
 
@@ -43,6 +43,9 @@ export default function UsersPage() {
   const [adResults, setAdResults] = useState<ADUser[]>([]);
   const [adLoading, setAdLoading] = useState(false);
   const [adSelected, setAdSelected] = useState<ADUser | null>(null);
+
+  const [resetUser, setResetUser] = useState<AppUser | null>(null);
+  const [resetPassword, setResetPassword] = useState("");
 
   const load = async () => {
     try {
@@ -111,6 +114,24 @@ export default function UsersPage() {
       load();
     } catch {
       toast.error("Erreur suppression");
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetUser) return;
+    try {
+      await api.post(`/api/v1/users/${resetUser.id}/reset-password`, { password: resetPassword });
+      toast.success(`Mot de passe reinitialise pour ${resetUser.login}`);
+      setResetUser(null);
+      setResetPassword("");
+    } catch (err: unknown) {
+      let msg = "Erreur inconnue";
+      if (err && typeof err === "object" && "response" in err) {
+        const axErr = err as { response?: { data?: { error?: string } } };
+        msg = axErr.response?.data?.error || msg;
+      }
+      toast.error(msg);
     }
   };
 
@@ -231,6 +252,28 @@ export default function UsersPage() {
         </div>
       )}
 
+      {resetUser && (
+        <div className="bg-white rounded-xl shadow-sm p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-amber-600 flex items-center gap-2">
+              <KeyRound size={20} />
+              Reinitialiser le mot de passe de {resetUser.login}
+            </h2>
+            <button onClick={() => { setResetUser(null); setResetPassword(""); }} className="p-1 hover:bg-gray-100 rounded">
+              <X size={18} />
+            </button>
+          </div>
+          <form onSubmit={handleResetPassword} className="flex gap-2 items-end">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Nouveau mot de passe</label>
+              <input type="password" value={resetPassword} onChange={(e) => setResetPassword(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" required autoFocus minLength={4} />
+            </div>
+            <button type="submit" className="bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 text-sm whitespace-nowrap">Reinitialiser</button>
+            <button type="button" onClick={() => { setResetUser(null); setResetPassword(""); }} className="px-4 py-2 border border-gray-300 rounded-lg text-sm">Annuler</button>
+          </form>
+        </div>
+      )}
+
       {showForm && (
         <div className="bg-white rounded-xl shadow-sm p-6">
           <h2 className="text-lg font-semibold text-ville-primary mb-4">
@@ -334,6 +377,7 @@ export default function UsersPage() {
                 </td>
                 <td className="px-4 py-3 text-sm text-right">
                   <div className="flex items-center justify-end gap-2">
+                    {u.source !== "ad" && <button onClick={() => { setResetUser(u); setResetPassword(""); }} className="p-1 text-amber-600 hover:bg-amber-50 rounded" title="Reinitialiser le mot de passe"><KeyRound size={16} /></button>}
                     <button onClick={() => openEdit(u)} className="p-1 text-gray-500 hover:bg-gray-100 rounded" title="Modifier"><Edit size={16} /></button>
                     <button onClick={() => handleDelete(u.id, u.login)} className="p-1 text-red-600 hover:bg-red-50 rounded" title="Supprimer"><Trash2 size={16} /></button>
                   </div>

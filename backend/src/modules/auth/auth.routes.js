@@ -97,4 +97,43 @@ router.get("/me", async (req, res, next) => {
   }
 });
 
+/**
+ * @openapi
+ * /api/v1/auth/change-password:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Changer son mot de passe
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [current_password, new_password]
+ *             properties:
+ *               current_password:
+ *                 type: string
+ *               new_password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Mot de passe modifie
+ *       401:
+ *         description: Mot de passe actuel incorrect
+ */
+router.post("/change-password", async (req, res, next) => {
+  try {
+    const { current_password, new_password } = req.body;
+    if (!current_password || !new_password) {
+      throw Object.assign(new Error("Mot de passe actuel et nouveau mot de passe requis"), { status: 400 });
+    }
+    await authService.changePassword(req.user.sub, current_password, new_password);
+    res.json({ message: "Mot de passe modifie" });
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;

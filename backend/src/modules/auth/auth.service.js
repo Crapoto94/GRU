@@ -19,9 +19,10 @@ const authService = {
   },
 
   async loginAD(login, password, ip) {
+    const normalizedLogin = login.toLowerCase();
     const adResult = await adService.authenticate(login, password);
     const adUser = adResult.user || adResult;
-    let user = await authRepository.findByLogin(login);
+    let user = await authRepository.findByLogin(normalizedLogin);
     if (!user) {
       const result = await pool.query(
         `INSERT INTO "${SCHEMA_NAME}".users (login, nom, prenom, email, password_hash, role, fonction, service, direction, source)
@@ -33,10 +34,10 @@ const authService = {
            updated_at = NOW()
          RETURNING id, login, nom, prenom, email, role, fonction, service, direction, source, actif`,
         [
-          login,
+          normalizedLogin,
           adUser.sn || "",
-          adUser.givenName || login,
-          adUser.mail || `${login}@ivry.local`,
+          adUser.givenName || normalizedLogin,
+          adUser.mail || `${normalizedLogin}@ivry.local`,
           adUser.title || null,
           adUser.department || null,
           adUser.company || null,
@@ -64,6 +65,19 @@ const authService = {
     const user = await authRepository.findById(userId);
     if (!user) throw Object.assign(new Error("Utilisateur non trouve"), { status: 404 });
     return user;
+  },
+
+  async changePassword(userId, currentPassword, newPassword) {
+    const user = await authRepository.findById(userId);
+    if (!user) throw Object.assign(new Error("Utilisateur non trouve"), { status: 404 });
+    const fullUser = await authRepository.findByLogin(user.login);
+    if (!fullUser || !fullUser.password_hash) {
+      throw Object.assign(new Error("Compte AD - modification du mot de passe impossible ici"), { status: 400 });
+    }
+    const valid = await authRepository.comparePassword(currentPassword, fullUser.password_hash);
+    if (!valid) throw Object.assign(new Error("Mot de passe actuel incorrect"), { status: 401 });
+    await authRepository.updatePassword(userId, newPassword);
+    await logAcces(userId, "CHANGE_PASSWORD", "users", userId, {}, null);
   },
 };
 

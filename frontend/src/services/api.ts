@@ -61,11 +61,15 @@ export const usersApi = {
   createFromAD: (data: Record<string, string>) => api.post("/api/v1/users/create-from-ad", data),
   update: (id: string, data: Record<string, string>) => api.put(`/api/v1/users/${id}`, data),
   remove: (id: string) => api.delete(`/api/v1/users/${id}`),
+  resetPassword: (id: string, password: string) =>
+    api.post(`/api/v1/users/${id}/reset-password`, { password }),
 };
 
 export const authApi = {
   login: (login: string, password: string) => api.post("/api/v1/auth/login", { login, password }),
   loginAD: (login: string, password: string) => api.post("/api/v1/auth/login-ad", { login, password }),
+  changePassword: (current_password: string, new_password: string) =>
+    api.post("/api/v1/auth/change-password", { current_password, new_password }),
 };
 
 export default api;

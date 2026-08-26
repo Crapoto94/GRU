@@ -26,7 +26,7 @@ const usersRepository = {
   },
 
   async findByLogin(login) {
-    return db.get(`SELECT ${SELECT_FIELDS} FROM ${TABLE} WHERE login = $1`, [login]);
+    return db.get(`SELECT ${SELECT_FIELDS} FROM ${TABLE} WHERE LOWER(login) = LOWER($1)`, [login]);
   },
 
   async create(data) {
