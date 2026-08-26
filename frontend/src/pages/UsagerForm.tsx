@@ -7,7 +7,7 @@ import { usagersApi } from "../services/api";
 import type { Usager } from "../types";
 
 const SITUATIONS = ["Celibataire", "Marie(e)", "Divorce(e)", "Veuf(ve)", "Pacs(e)", "Concubin(e)"];
-const CIVILITES = ["M.", "Mme"];
+const CIVILITES = ["M.", "Mme", "Mx"];
 const PAYS = [
   "France","Allemagne","Algerie","Belgique","Bresil","Burkina Faso","Cameroun",
   "Canada","Chine","Cote d'Ivoire","Espagne","Etats-Unis","Gabon","Grece",
@@ -211,9 +211,17 @@ export default function UsagerForm() {
     if (isEdit && id) {
       usagersApi.getById(id).then((res) => {
         const u = res.data;
+        const parseLocalDate = (iso: string) => {
+          if (!iso) return "";
+          const d = new Date(iso);
+          const year = d.getFullYear();
+          const month = String(d.getMonth() + 1).padStart(2, "0");
+          const day = String(d.getDate()).padStart(2, "0");
+          return `${year}-${month}-${day}`;
+        };
         setForm({
           ...u,
-          date_naissance: u.date_naissance ? u.date_naissance.split("T")[0] : "",
+          date_naissance: parseLocalDate(u.date_naissance),
         });
       });
     }

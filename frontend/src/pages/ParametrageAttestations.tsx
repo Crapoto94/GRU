@@ -5,7 +5,7 @@ import { attestationsApi } from "../services/api";
 import type { Template } from "../types";
 
 const VARIABLES_USAGER = [
-  { nom: "civilite", description: "Civilite de l'usager (M., Mme)", exemple: "M." },
+  { nom: "civilite", description: "Civilite de l'usager (M., Mme, Mx)", exemple: "M." },
   { nom: "ne", description: "\"ne\" si masculin, \"nee\" si feminin", exemple: "nee" },
   { nom: "sexe", description: "\"masculin\" ou \"féminin\"", exemple: "masculin" },
   { nom: "nom", description: "Nom de famille de l'usager", exemple: "DUPONT" },
