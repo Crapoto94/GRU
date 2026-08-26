@@ -8,7 +8,9 @@ services:
       dockerfile: Dockerfile
     restart: always
     ports:
-      - "${PORT:-3221}:3221"
+      - "${PORT:-3000}:3000"
+    environment:
+      - PORT=3000
     env_file:
       - .env
     volumes:
