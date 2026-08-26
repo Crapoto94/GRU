@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { Save, ArrowLeft, Search, AlertTriangle, CheckCircle } from "lucide-react";
 import toast from "react-hot-toast";
 import { formatNom, formatPrenom } from "../utils/format";
@@ -177,6 +177,8 @@ function InputField({
 export default function UsagerForm() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const location = useLocation();
+  const prefill = (location.state as { prefill?: Partial<Usager> } | null)?.prefill;
   const isEdit = Boolean(id);
   const [saving, setSaving] = useState(false);
   const [adresseSuggestions, setAdresseSuggestions] = useState<AdresseSuggestion[]>([]);
@@ -205,6 +207,7 @@ export default function UsagerForm() {
     pays: "France",
     consentement_rgpd: false,
     mail_actif: true,
+    ...(prefill || {}),
   });
 
   useEffect(() => {
@@ -333,6 +336,12 @@ export default function UsagerForm() {
           {isEdit ? "Modifier l'usager" : "Nouvel usager"}
         </h1>
       </div>
+
+      {!isEdit && prefill && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm text-blue-800">
+          Fiche pre-remplie a partir des donnees Synbird. Verifiez les informations avant enregistrement.
+        </div>
+      )}
 
       {showDoublonModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">

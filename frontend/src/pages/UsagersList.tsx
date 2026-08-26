@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Search, Plus, Archive, RotateCcw, Trash2, ChevronLeft, ChevronRight, FileText, X, Download } from "lucide-react";
+import { Search, Plus, Archive, RotateCcw, Trash2, ChevronLeft, ChevronRight, FileText, X, Download, UserSearch } from "lucide-react";
 import toast from "react-hot-toast";
 import { formatNom, formatPrenom } from "../utils/format";
 import { usagersApi, attestationsApi } from "../services/api";
@@ -21,6 +21,14 @@ export default function UsagersList() {
 
   const [attestationsModal, setAttestationsModal] = useState<{ usager: Usager; attestations: Attestation[] } | null>(null);
   const [loadingAttestations, setLoadingAttestations] = useState(false);
+
+  const [showSynbirdModal, setShowSynbirdModal] = useState(false);
+  const [synbirdContact, setSynbirdContact] = useState("");
+  const [synbirdLoading, setSynbirdLoading] = useState(false);
+  const [synbirdExisting, setSynbirdExisting] = useState<{ id: string; nom: string; prenom: string; archived: boolean } | null>(null);
+  const [synbirdCandidates, setSynbirdCandidates] = useState<Array<Partial<Usager> & { accompagnant?: boolean }> | null>(null);
+  const [synbirdNotFound, setSynbirdNotFound] = useState(false);
+  const [synbirdTooMany, setSynbirdTooMany] = useState<number | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -100,19 +108,77 @@ export default function UsagersList() {
     }
   };
 
+  const handleSynbirdSearch = async () => {
+    const contact = synbirdContact.trim();
+    if (!contact) {
+      toast.error("Saisissez un numero de telephone ou un email");
+      return;
+    }
+    setSynbirdLoading(true);
+    setSynbirdExisting(null);
+    setSynbirdCandidates(null);
+    setSynbirdNotFound(false);
+    setSynbirdTooMany(null);
+    try {
+      const res = await usagersApi.importSynbird(contact);
+      if (res.data.exists && res.data.usager) {
+        setSynbirdExisting(res.data.usager);
+      } else if (res.data.tooMany) {
+        setSynbirdTooMany(res.data.count || 0);
+      } else if (res.data.found && res.data.candidates?.length) {
+        setSynbirdCandidates(res.data.candidates);
+      } else {
+        setSynbirdNotFound(true);
+      }
+    } catch (err: unknown) {
+      let msg = "Erreur lors de la recherche Synbird";
+      if (err && typeof err === "object" && "response" in err) {
+        const response = (err as { response?: { data?: { error?: string } } }).response;
+        if (response?.data?.error) msg = response.data.error;
+      }
+      toast.error(msg);
+    } finally {
+      setSynbirdLoading(false);
+    }
+  };
+
+  const confirmSynbirdCandidate = (candidate: Partial<Usager> & { accompagnant?: boolean }) => {
+    const { accompagnant: _accompagnant, ...prefill } = candidate;
+    closeSynbirdModal();
+    navigate("/usagers/nouveau", { state: { prefill } });
+  };
+
+  const closeSynbirdModal = () => {
+    setShowSynbirdModal(false);
+    setSynbirdContact("");
+    setSynbirdExisting(null);
+    setSynbirdCandidates(null);
+    setSynbirdNotFound(false);
+    setSynbirdTooMany(null);
+  };
+
   const totalPages = Math.ceil(total / limit);
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-ville-dark">Usagers</h1>
-        <button
-          onClick={() => navigate("/usagers/nouveau")}
-          className="flex items-center gap-2 bg-ville-primary text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
-        >
-          <Plus size={16} />
-          Nouvel usager
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowSynbirdModal(true)}
+            className="flex items-center gap-2 bg-white border border-ville-primary text-ville-primary px-4 py-2 rounded-lg hover:bg-blue-50 transition"
+          >
+            <UserSearch size={16} />
+            Importer Synbird
+          </button>
+          <button
+            onClick={() => navigate("/usagers/nouveau")}
+            className="flex items-center gap-2 bg-ville-primary text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+          >
+            <Plus size={16} />
+            Nouvel usager
+          </button>
+        </div>
       </div>
 
       <div className="flex items-center gap-4">
@@ -286,6 +352,116 @@ export default function UsagersList() {
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL IMPORT SYNBIRD */}
+      {showSynbirdModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <h2 className="text-lg font-bold text-ville-dark">Importer depuis Synbird</h2>
+              <button onClick={closeSynbirdModal} className="p-2 hover:bg-gray-100 rounded-lg">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-gray-500">
+                Saisissez le numero de telephone ou l'email de l'usager pour rechercher ses coordonnees dans Synbird.
+              </p>
+              <input
+                type="text"
+                autoFocus
+                value={synbirdContact}
+                onChange={(e) => {
+                  setSynbirdContact(e.target.value);
+                  setSynbirdExisting(null);
+                  setSynbirdCandidates(null);
+                  setSynbirdNotFound(false);
+                  setSynbirdTooMany(null);
+                }}
+                onKeyDown={(e) => { if (e.key === "Enter") handleSynbirdSearch(); }}
+                placeholder="0601020304 ou nom@exemple.fr"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-ville-primary focus:border-transparent"
+              />
+
+              {synbirdExisting && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
+                  Un usager existe deja avec ce contact :{" "}
+                  <span className="font-semibold">{formatPrenom(synbirdExisting.prenom)} {formatNom(synbirdExisting.nom)}</span>
+                  {synbirdExisting.archived && " (archive)"}
+                  <button
+                    onClick={() => { closeSynbirdModal(); navigate(`/usagers/${synbirdExisting.id}`); }}
+                    className="block mt-2 text-ville-primary font-medium hover:underline"
+                  >
+                    Voir la fiche usager
+                  </button>
+                </div>
+              )}
+
+              {synbirdNotFound && (
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm text-gray-600">
+                  Aucun contact Synbird trouve pour cette recherche.
+                </div>
+              )}
+
+              {synbirdTooMany !== null && (
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm text-gray-600">
+                  {synbirdTooMany} contacts trouves dans Synbird, c'est trop pour les afficher. Affinez votre recherche (email complet, numero exact...).
+                </div>
+              )}
+
+              {synbirdCandidates && (
+                <div className="space-y-2">
+                  <p className="text-sm text-gray-600">
+                    {synbirdCandidates.length > 1
+                      ? `${synbirdCandidates.length} contacts trouves dans Synbird. Choisissez celui a importer :`
+                      : "Contact trouve dans Synbird. Confirmez la creation de la fiche :"}
+                  </p>
+                  {synbirdCandidates.map((c, i) => (
+                    <div key={i} className="flex items-center justify-between gap-3 border border-gray-200 rounded-lg p-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-ville-dark truncate flex items-center gap-2">
+                          {formatPrenom(c.prenom || "")} {formatNom(c.nom || "")}
+                          {c.accompagnant && (
+                            <span className="shrink-0 bg-blue-100 text-blue-700 text-[10px] font-medium px-1.5 py-0.5 rounded-full">
+                              Accompagnant RDV
+                            </span>
+                          )}
+                        </p>
+                        <p className="text-xs text-gray-500 truncate">
+                          {c.email || c.mobile || (c.accompagnant ? "Aucune coordonnee (mentionne dans un RDV)" : "")}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => confirmSynbirdCandidate(c)}
+                        className="shrink-0 bg-ville-primary text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-blue-700 transition"
+                      >
+                        Creer la fiche
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  onClick={closeSynbirdModal}
+                  className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={handleSynbirdSearch}
+                  disabled={synbirdLoading}
+                  className="flex items-center gap-2 bg-ville-primary text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+                >
+                  <Search size={16} />
+                  {synbirdLoading ? "Recherche..." : "Rechercher"}
+                </button>
+              </div>
             </div>
           </div>
         </div>

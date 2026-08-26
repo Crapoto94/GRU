@@ -70,6 +70,31 @@ router.get("/validate/adresse", async (req, res, next) => {
 
 /**
  * @openapi
+ * /api/v1/usagers/import-synbird:
+ *   get:
+ *     tags: [Usagers]
+ *     summary: Rechercher un contact Synbird par telephone ou email pour pre-remplir une fiche usager
+ *     parameters:
+ *       - in: query
+ *         name: contact
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Usager existant, ou donnees Synbird trouvees/non trouvees
+ */
+router.get("/import-synbird", async (req, res, next) => {
+  try {
+    const result = await usagerService.importFromSynbird(req.query.contact);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * @openapi
  * /api/v1/usagers/{id}:
  *   get:
  *     tags: [Usagers]

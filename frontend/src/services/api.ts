@@ -26,6 +26,15 @@ export const usagersApi = {
     api.get<{ valid: boolean; suggestions: Array<{ label: string; score: number }> }>("/api/v1/usagers/validate/adresse", { params: { q } }),
   checkDoublon: (params: { nom?: string; date_naissance?: string; telephone?: string; exclude_id?: string }) =>
     api.get<{ nom_date: Usager[]; telephone: Usager[] }>("/api/v1/usagers/check-doublon", { params }),
+  importSynbird: (contact: string) =>
+    api.get<{
+      exists: boolean;
+      usager?: { id: string; nom: string; prenom: string; archived: boolean };
+      found?: boolean;
+      candidates?: Array<Partial<Usager> & { accompagnant?: boolean }>;
+      tooMany?: boolean;
+      count?: number;
+    }>("/api/v1/usagers/import-synbird", { params: { contact } }),
 };
 
 export const attestationsApi = {

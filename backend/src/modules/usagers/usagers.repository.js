@@ -57,6 +57,14 @@ const usagerRepository = {
     return db.get(`SELECT *, adresse as "Adresse" FROM ${TABLE} WHERE id = $1`, [id]);
   },
 
+  async findByContact(contact) {
+    return db.get(
+      `SELECT id, nom, prenom, email, telephone, mobile, archived FROM ${TABLE}
+       WHERE telephone = $1 OR mobile = $1 OR LOWER(email) = LOWER($1) LIMIT 1`,
+      [contact]
+    );
+  },
+
   async create(data) {
     const result = await db.run(
       `INSERT INTO ${TABLE} (civilite, nom, prenom, nom_usage, date_naissance, lieu_naissance,
