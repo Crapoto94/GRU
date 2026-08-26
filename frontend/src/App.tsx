@@ -5,7 +5,6 @@ import LoginPage from "./pages/LoginPage";
 import Dashboard from "./pages/Dashboard";
 import UsagersList from "./pages/UsagersList";
 import UsagerForm from "./pages/UsagerForm";
-import UsagerDetail from "./pages/UsagerDetail";
 import AttestationsList from "./pages/AttestationsList";
 import AttestationGenerate from "./pages/AttestationGenerate";
 import ParametrageAttestations from "./pages/ParametrageAttestations";
@@ -35,8 +34,7 @@ export default function App() {
                   <Route path="/" element={<Dashboard />} />
                   <Route path="/usagers" element={<UsagersList />} />
                   <Route path="/usagers/nouveau" element={<UsagerForm />} />
-                  <Route path="/usagers/:id" element={<UsagerDetail />} />
-                  <Route path="/usagers/:id/modifier" element={<UsagerForm />} />
+                  <Route path="/usagers/:id" element={<UsagerForm />} />
                   <Route path="/attestations" element={<AttestationsList />} />
                   <Route path="/attestations/nouvelle" element={<AttestationGenerate />} />
                   <Route path="/parametrage/attestations" element={<ParametrageAttestations />} />

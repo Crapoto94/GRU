@@ -4,7 +4,7 @@ const TABLE = `"${SCHEMA_NAME}".usagers`;
 
 const usagerRepository = {
   async findAll({ archived = false, search = "", limit = 50, offset = 0 } = {}) {
-    let query = `SELECT * FROM ${TABLE} WHERE archived = $1`;
+    let query = `SELECT *, adresse as "Adresse" FROM ${TABLE} WHERE archived = $1`;
     const params = [archived];
     if (search) {
       params.push(`%${search}%`);
@@ -23,7 +23,7 @@ const usagerRepository = {
   },
 
   async findById(id) {
-    return db.get(`SELECT * FROM ${TABLE} WHERE id = $1`, [id]);
+    return db.get(`SELECT *, adresse as "Adresse" FROM ${TABLE} WHERE id = $1`, [id]);
   },
 
   async create(data) {

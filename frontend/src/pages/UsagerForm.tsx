@@ -7,7 +7,7 @@ import { usagersApi } from "../services/api";
 import type { Usager } from "../types";
 
 const SITUATIONS = ["Celibataire", "Marie(e)", "Divorce(e)", "Veuf(ve)", "Pacs(e)", "Concubin(e)"];
-const CIVILITES = ["M.", "Mme", "Mlle"];
+const CIVILITES = ["M.", "Mme"];
 const PAYS = [
   "France","Allemagne","Algerie","Belgique","Bresil","Burkina Faso","Cameroun",
   "Canada","Chine","Cote d'Ivoire","Espagne","Etats-Unis","Gabon","Grece",

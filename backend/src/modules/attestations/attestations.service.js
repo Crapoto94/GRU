@@ -11,12 +11,14 @@ const TEMPLATES_DIR = path.resolve(__dirname, "../../../templates");
 const UPLOADS_DIR = path.resolve(__dirname, "../../../uploads/documents");
 
 function prepareUsagerData(usager) {
+  const isMale = usager.civilite === "M.";
   return {
     civilite: usager.civilite || "",
     nom: usager.nom || "",
     prenom: usager.prenom || "",
     nom_complet: `${usager.civilite || ""} ${usager.prenom || ""} ${usager.nom || ""}`.trim(),
     nom_usage: usager.nom_usage || "",
+    ne: isMale ? "ne" : "nee",
     date_naissance: usager.date_naissance
       ? new Date(usager.date_naissance).toLocaleDateString("fr-FR")
       : "",
