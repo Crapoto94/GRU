@@ -144,6 +144,7 @@ router.post("/templates/upload", upload.single("file"), async (req, res, next) =
       fichier_original: req.file.filename,
       variables: req.body.variables ? JSON.parse(req.body.variables) : [],
       nb_usagers: parseInt(req.body.nb_usagers, 10) || 1,
+      usager_labels: req.body.usager_labels ? JSON.parse(req.body.usager_labels) : null,
     });
     res.status(201).json(template);
   } catch (err) {
@@ -227,6 +228,9 @@ router.put("/templates/:id", upload.single("file"), async (req, res, next) => {
     if (req.body.nom !== undefined) data.nom = req.body.nom;
     if (req.body.description !== undefined) data.description = req.body.description;
     if (req.body.nb_usagers !== undefined) data.nb_usagers = parseInt(req.body.nb_usagers, 10) || 1;
+    if (req.body.usager_labels !== undefined) {
+      try { data.usager_labels = JSON.parse(req.body.usager_labels); } catch { /* ignore */ }
+    }
     if (req.body.variables !== undefined) {
       try { data.variables = JSON.parse(req.body.variables); } catch { /* ignore */ }
     }
@@ -332,7 +336,7 @@ router.get("/:id", async (req, res, next) => {
  */
 router.post("/generate", async (req, res, next) => {
   try {
-    const { usager_id, usager2_id, template_id, custom_data } = req.body;
+    const { usager_id, usager2_id, usager3_id, template_id, custom_data } = req.body;
     if (!usager_id || !template_id) {
       throw Object.assign(new Error("usager_id et template_id sont requis"), { status: 400 });
     }
@@ -342,7 +346,8 @@ router.post("/generate", async (req, res, next) => {
       custom_data,
       req.user?.login || "system",
       req.ip,
-      usager2_id
+      usager2_id,
+      usager3_id
     );
     res.status(201).json(attestation);
   } catch (err) {

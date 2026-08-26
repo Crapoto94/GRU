@@ -109,6 +109,9 @@ export default function AttestationsList() {
                     {a.usager2_nom && a.usager2_prenom && (
                       <> & {formatPrenom(a.usager2_prenom)} {formatNom(a.usager2_nom)}</>
                     )}
+                    {a.usager3_nom && a.usager3_prenom && (
+                      <> & {formatPrenom(a.usager3_prenom)} {formatNom(a.usager3_nom)}</>
+                    )}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-600">{a.template_nom}</td>
                   <td className="px-6 py-4 text-sm">

@@ -34,6 +34,7 @@ export interface Template {
   fichier_original: string;
   variables: string[];
   nb_usagers: number;
+  usager_labels: Record<string, string> | null;
   actif: boolean;
   created_at: string;
 }
@@ -42,11 +43,14 @@ export interface Attestation {
   id: string;
   usager_id: string;
   usager2_id: string | null;
+  usager3_id: string | null;
   template_id: string;
   usager_nom: string;
   usager_prenom: string;
   usager2_nom: string | null;
   usager2_prenom: string | null;
+  usager3_nom: string | null;
+  usager3_prenom: string | null;
   template_nom: string;
   titre: string;
   contenu_genere: Record<string, string>;

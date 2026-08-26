@@ -19,6 +19,7 @@ function prepareUsagerData(usager) {
     nom_complet: `${usager.civilite || ""} ${usager.prenom || ""} ${usager.nom || ""}`.trim(),
     nom_usage: usager.nom_usage ? `(${usager.nom_usage})` : "",
     ne: isMale ? "ne" : "nee",
+    sexe: isMale ? "Masculin" : "Feminin",
     date_naissance: usager.date_naissance
       ? new Date(usager.date_naissance).toLocaleDateString("fr-FR")
       : "",
@@ -42,6 +43,14 @@ function prepareUsagerData(usager) {
     ville: usager.ville || "",
     pays: usager.pays || "France",
   };
+}
+
+function slugifyLabel(label) {
+  return label
+    .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_|_$/g, "");
 }
 
 const attestationService = {
@@ -71,7 +80,7 @@ const attestationService = {
     return attestation;
   },
 
-  async generate(usagerId, templateId, customData, user, ip, usager2Id) {
+  async generate(usagerId, templateId, customData, user, ip, usager2Id, usager3Id) {
     const usager = await usagerRepository.findById(usagerId);
     if (!usager) throw Object.assign(new Error("Usager non trouve"), { status: 404 });
 
@@ -79,10 +88,17 @@ const attestationService = {
     if (!template) throw Object.assign(new Error("Template non trouve"), { status: 404 });
 
     const nbUsagers = template.nb_usagers || 1;
+    const labels = template.usager_labels || {};
+
     let usager2 = null;
-    if (nbUsagers === 2 && usager2Id) {
+    if (nbUsagers >= 2 && usager2Id) {
       usager2 = await usagerRepository.findById(usager2Id);
       if (!usager2) throw Object.assign(new Error("Second usager non trouve"), { status: 404 });
+    }
+    let usager3 = null;
+    if (nbUsagers >= 3 && usager3Id) {
+      usager3 = await usagerRepository.findById(usager3Id);
+      if (!usager3) throw Object.assign(new Error("Troisieme usager non trouve"), { status: 404 });
     }
 
     const templatePath = path.join(TEMPLATES_DIR, template.fichier_original);
@@ -99,19 +115,23 @@ const attestationService = {
     });
 
     let mergeData;
-    if (nbUsagers === 2 && usager2) {
-      const u1 = prepareUsagerData(usager);
-      const u2 = prepareUsagerData(usager2);
-      mergeData = {};
-      for (const [key, val] of Object.entries(u1)) {
-        mergeData[`usager1_${key}`] = val;
-      }
-      for (const [key, val] of Object.entries(u2)) {
-        mergeData[`usager2_${key}`] = val;
-      }
-    } else {
+
+    if (nbUsagers === 1) {
       mergeData = prepareUsagerData(usager);
+    } else {
+      mergeData = {};
+      const usagers = [
+        { data: usager, key: slugifyLabel(labels["1"] || "usager1") },
+        ...(usager2 ? [{ data: usager2, key: slugifyLabel(labels["2"] || "usager2") }] : []),
+        ...(usager3 ? [{ data: usager3, key: slugifyLabel(labels["3"] || "usager3") }] : []),
+      ];
+      for (const { data, key } of usagers) {
+        for (const [field, val] of Object.entries(prepareUsagerData(data))) {
+          mergeData[`${key}_${field}`] = val;
+        }
+      }
     }
+
     mergeData.date_du_jour = new Date().toLocaleDateString("fr-FR");
     mergeData.date_du_jour_long = new Date().toLocaleDateString("fr-FR", {
       year: "numeric",
@@ -129,14 +149,16 @@ const attestationService = {
     fs.mkdirSync(UPLOADS_DIR, { recursive: true });
     fs.writeFileSync(filePath, outputDocx);
 
-    const titreSuffixe = nbUsagers === 2 && usager2
-      ? `${usager.prenom} ${usager.nom} & ${usager2.prenom} ${usager2.nom}`
-      : `${usager.prenom} ${usager.nom}`;
+    const nameParts = [`${usager.prenom} ${usager.nom}`];
+    if (usager2) nameParts.push(`${usager2.prenom} ${usager2.nom}`);
+    if (usager3) nameParts.push(`${usager3.prenom} ${usager3.nom}`);
+    const titreSuffixe = nameParts.join(" & ");
 
     const attestation = await attestationRepository.create({
       id: attestationId,
       usager_id: usagerId,
-      usager2_id: nbUsagers === 2 ? usager2Id : null,
+      usager2_id: nbUsagers >= 2 ? usager2Id : null,
+      usager3_id: nbUsagers >= 3 ? usager3Id : null,
       template_id: templateId,
       titre: `${template.nom} - ${titreSuffixe}`,
       contenu_genere: mergeData,

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Upload, FileText, Trash2, ChevronDown, ChevronRight, Info, Pencil } from "lucide-react";
+import { Upload, FileText, Trash2, ChevronDown, ChevronRight, Info, Pencil, Plus, X } from "lucide-react";
 import toast from "react-hot-toast";
 import { attestationsApi } from "../services/api";
 import type { Template } from "../types";
@@ -7,6 +7,7 @@ import type { Template } from "../types";
 const VARIABLES_USAGER = [
   { nom: "civilite", description: "Civilite de l'usager (M., Mme)", exemple: "M." },
   { nom: "ne", description: "\"ne\" si masculin, \"nee\" si feminin", exemple: "nee" },
+  { nom: "sexe", description: "\"Masculin\" ou \"Feminin\"", exemple: "Masculin" },
   { nom: "nom", description: "Nom de famille de l'usager", exemple: "DUPONT" },
   { nom: "prenom", description: "Prenom de l'usager", exemple: "Jean" },
   { nom: "nom_complet", description: "Civilite + Prenom + Nom (genere automatiquement)", exemple: "M. Jean DUPONT" },
@@ -32,12 +33,70 @@ const VARIABLES_SYSTEME = [
   { nom: "date_du_jour_long", description: "Date du jour en toutes lettres", exemple: "25 aout 2026" },
 ];
 
+const NB_USAGERS_OPTIONS = [1, 2, 3];
+const NB_USAGERS_LABELS: Record<number, string> = { 1: "1 usager (ex: Attestation de domicile)", 2: "2 usagers (ex: Attestation de concubinage)", 3: "3 usagers (ex: Attestation familiale)" };
+
+function VariablesEditor({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
+  const add = () => onChange([...value, ""]);
+  const remove = (i: number) => onChange(value.filter((_, idx) => idx !== i));
+  const update = (i: number, v: string) => {
+    const next = [...value];
+    next[i] = v;
+    onChange(next);
+  };
+  return (
+    <div className="space-y-2">
+      {value.map((desc, i) => (
+        <div key={i} className="flex items-center gap-2">
+          <span className="text-xs font-mono text-gray-400 w-20 shrink-0">variable{i + 1}</span>
+          <input
+            type="text"
+            value={desc}
+            onChange={(e) => update(i, e.target.value)}
+            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-ville-primary focus:border-transparent"
+            placeholder="Description de la variable (ex: Motif de la demande)"
+          />
+          <button type="button" onClick={() => remove(i)} className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded shrink-0">
+            <X size={16} />
+          </button>
+        </div>
+      ))}
+      <button type="button" onClick={add} className="flex items-center gap-1 text-sm text-ville-primary hover:text-blue-700 mt-1">
+        <Plus size={14} /> Ajouter une variable
+      </button>
+    </div>
+  );
+}
+
+function LabelsEditor({ nbUsagers, value, onChange }: { nbUsagers: number; value: Record<string, string>; onChange: (v: Record<string, string>) => void }) {
+  const defaults: Record<number, string> = { 1: "Usager 1", 2: "Usager 2", 3: "Usager 3" };
+  const keys = Array.from({ length: nbUsagers }, (_, i) => String(i + 1));
+  if (nbUsagers <= 1) return null;
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+      {keys.map((k) => (
+        <div key={k}>
+          <label className="block text-xs text-gray-500 mb-1">Label usager {k}</label>
+          <input
+            type="text"
+            value={value[k] || ""}
+            onChange={(e) => onChange({ ...value, [k]: e.target.value })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-ville-primary focus:border-transparent"
+            placeholder={defaults[Number(k)]}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function ParametrageAttestations() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [uploadNom, setUploadNom] = useState("");
   const [uploadDesc, setUploadDesc] = useState("");
-  const [uploadVars, setUploadVars] = useState("");
+  const [uploadVars, setUploadVars] = useState<string[]>([]);
   const [uploadNbUsagers, setUploadNbUsagers] = useState(1);
+  const [uploadLabels, setUploadLabels] = useState<Record<string, string>>({});
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [aideOuverte, setAideOuverte] = useState(false);
@@ -45,8 +104,9 @@ export default function ParametrageAttestations() {
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
   const [editNom, setEditNom] = useState("");
   const [editDesc, setEditDesc] = useState("");
-  const [editVars, setEditVars] = useState("");
+  const [editVars, setEditVars] = useState<string[]>([]);
   const [editNbUsagers, setEditNbUsagers] = useState(1);
+  const [editLabels, setEditLabels] = useState<Record<string, string>>({});
   const [editFile, setEditFile] = useState<File | null>(null);
   const [editing, setEditing] = useState(false);
 
@@ -65,7 +125,7 @@ export default function ParametrageAttestations() {
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!uploadFile || !uploadNom) {
+    if (!uploadNom || !uploadFile) {
       toast.error("Nom et fichier requis");
       return;
     }
@@ -75,21 +135,22 @@ export default function ParametrageAttestations() {
     formData.append("nom", uploadNom);
     formData.append("description", uploadDesc);
     formData.append("nb_usagers", String(uploadNbUsagers));
-    if (uploadVars.trim()) {
-      formData.append(
-        "variables",
-        JSON.stringify(
-          uploadVars.split(",").map((v) => v.trim()).filter(Boolean)
-        )
-      );
+    const descs = uploadVars.filter((v) => v.trim());
+    if (descs.length > 0) {
+      formData.append("variables", JSON.stringify(descs));
+    }
+    const labels = Object.fromEntries(Object.entries(uploadLabels).filter(([, v]) => v.trim()));
+    if (Object.keys(labels).length > 0) {
+      formData.append("usager_labels", JSON.stringify(labels));
     }
     try {
       await attestationsApi.uploadTemplate(formData);
       toast.success("Template enregistre avec succes");
       setUploadNom("");
       setUploadDesc("");
-      setUploadVars("");
+      setUploadVars([]);
       setUploadNbUsagers(1);
+      setUploadLabels({});
       setUploadFile(null);
       loadTemplates();
     } catch {
@@ -114,8 +175,9 @@ export default function ParametrageAttestations() {
     setEditingTemplate(t);
     setEditNom(t.nom);
     setEditDesc(t.description || "");
-    setEditVars(t.variables?.join(", ") || "");
+    setEditVars(t.variables || []);
     setEditNbUsagers(t.nb_usagers || 1);
+    setEditLabels(t.usager_labels || {});
     setEditFile(null);
   };
 
@@ -130,9 +192,10 @@ export default function ParametrageAttestations() {
     formData.append("nom", editNom);
     formData.append("description", editDesc);
     formData.append("nb_usagers", String(editNbUsagers));
-    if (editVars.trim()) {
-      formData.append("variables", JSON.stringify(editVars.split(",").map((v) => v.trim()).filter(Boolean)));
-    }
+    const descs = editVars.filter((v) => v.trim());
+    formData.append("variables", JSON.stringify(descs));
+    const labels = Object.fromEntries(Object.entries(editLabels).filter(([, v]) => v.trim()));
+    formData.append("usager_labels", JSON.stringify(labels));
     if (editFile) {
       formData.append("file", editFile);
     }
@@ -167,106 +230,27 @@ export default function ParametrageAttestations() {
         {aideOuverte && (
           <div className="px-6 pb-6 space-y-4 text-sm text-gray-700 border-t border-gray-100 pt-4">
             <div>
-              <h3 className="font-semibold text-ville-dark mb-2">1. Creer le document Word</h3>
-              <ul className="list-disc list-inside space-y-1 ml-2 text-gray-600">
-                <li>Ouvrez <strong>Microsoft Word</strong> (ou LibreOffice Writer)</li>
-                <li>Redigez votre attestation comme d'habitude (en-tete, corps de texte, signature...)</li>
-                <li>A l'endroit souhaite, inserez les variables grace a la syntaxe <code className="bg-gray-100 px-1 rounded">{"{{nom_de_la_variable}}"}</code></li>
-                <li>Sauvegardez le fichier au format <strong>.docx</strong></li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-semibold text-ville-dark mb-2">2. Exemple de document</h3>
-              <div className="bg-gray-50 rounded-lg p-4 font-mono text-xs leading-relaxed text-gray-600">
-                <p>Ville d'Ivry-sur-Seine</p>
-                <p className="mt-2">Direction des Services Publics</p>
-                <p className="mt-4">Objet : Attestation de domicile</p>
-                <p className="mt-4">
-                  Je soussigne(e), <span className="bg-ville-primary/10 px-1 rounded text-ville-primary">{"{{nom_complet}}"}</span>,
-                </p>
-                <p className="mt-1">
-                  ne(e) le <span className="bg-ville-primary/10 px-1 rounded text-ville-primary">{"{{date_naissance_long}}"}</span>
-                  {" "}a <span className="bg-ville-primary/10 px-1 rounded text-ville-primary">{"{{lieu_naissance}}"}</span>,
-                </p>
-                <p className="mt-1">
-                  demeurant au <span className="bg-ville-primary/10 px-1 rounded text-ville-primary">{"{{adresse_complete}}"}</span>,
-                </p>
-                <p className="mt-1">
-                  {" "}<span className="bg-ville-primary/10 px-1 rounded text-ville-primary">{"{{code_postal}}"}</span>
-                  {" "}<span className="bg-ville-primary/10 px-1 rounded text-ville-primary">{"{{ville}}"}</span>,
-                </p>
-                <p className="mt-4">
-                  atteste sur l'honneur etre domicilie(e) a l'adresse indiquee ci-dessus.
-                </p>
-                <p className="mt-4">
-                  Fait a Ivry-sur-Seine, le <span className="bg-ville-primary/10 px-1 rounded text-ville-primary">{"{{date_du_jour}}"}</span>
-                </p>
-              </div>
-            </div>
-            <div>
-              <h3 className="font-semibold text-ville-dark mb-2">3. Uploader le template</h3>
-              <ul className="list-disc list-inside space-y-1 ml-2 text-gray-600">
-                <li>Cliquez sur "Nouveau template" ci-dessous</li>
-                <li>Donnez un nom explicite (ex: "Attestation de domicile")</li>
-                <li>Selectionnez votre fichier .docx</li>
-                <li>Optionnellement, declarez les variables custom supplementaires (separees par une virgule)</li>
-                <li>Validez. Le template sera disponible lors de la generation d'attestations</li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-semibold text-ville-dark mb-2">4. Utiliser le template</h3>
-              <ul className="list-disc list-inside space-y-1 ml-2 text-gray-600">
-                <li>Allez dans <strong>Attestations &gt; Nouvelle attestation</strong></li>
-                <li>Selectionnez l'usager et le template souhaite</li>
-                <li>Si vous avez declare des variables custom, renseignez leurs valeurs</li>
-                <li>Cliquez sur "Generer" - le document sera fusionne et converti en PDF automatiquement</li>
-              </ul>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* === LISTE DES VARIABLES === */}
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-        <button
-          onClick={() => setVarsOuvert(!varsOuvert)}
-          className="w-full flex items-center gap-3 px-6 py-4 text-left hover:bg-gray-50 transition"
-        >
-          <FileText size={20} className="text-ville-primary shrink-0" />
-          <span className="font-semibold text-ville-dark">
-            Variables disponibles ({VARIABLES_USAGER.length + VARIABLES_SYSTEME.length})
-          </span>
-          <span className="ml-auto text-gray-400">
-            {varsOuvert ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
-          </span>
-        </button>
-        {varsOuvert && (
-          <div className="px-6 pb-6 border-t border-gray-100 pt-4 space-y-6">
-            <div>
-              <h3 className="font-semibold text-sm text-ville-dark mb-3">Variables liees a l'usager (fusion automatique)</h3>
-              <p className="text-xs text-gray-500 mb-3">
-                <strong>Template 1 usager :</strong> utilisez {"{{nom}}"}, {"{{prenom}}"}, etc. directement.<br />
-                <strong>Template 2 usagers :</strong> prefixez par usager1_ ou usager2_ (ex: {"{{usager1_nom}}"}, {"{{usager2_prenom}}"}).
+              <p className="font-medium text-ville-dark mb-1">1. Creer votre document Word</p>
+              <p className="text-gray-600">
+                Utilisez des balises entre doublees accolades pour les champs dynamiques.
+                Exemple : {`{{nom}}`}, {`{{prenom}}`}, {`{{date_naissance}}`}.
               </p>
-              <div className="bg-gray-50 rounded-lg overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-gray-100">
-                      <th className="text-left px-4 py-2 font-semibold text-gray-600">Variable</th>
-                      <th className="text-left px-4 py-2 font-semibold text-gray-600">Description</th>
-                      <th className="text-left px-4 py-2 font-semibold text-gray-600">Exemple</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
+            </div>
+            <div>
+              <p className="font-medium text-ville-dark mb-1">2. Variables d'usager (fusionnees automatiquement)</p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs mt-2">
+                  <thead><tr className="border-b border-gray-200">
+                    <th className="text-left py-1 pr-4">Variable</th>
+                    <th className="text-left py-1 pr-4">Description</th>
+                    <th className="text-left py-1">Exemple</th>
+                  </tr></thead>
+                  <tbody>
                     {VARIABLES_USAGER.map((v) => (
-                      <tr key={v.nom} className="hover:bg-gray-50">
-                        <td className="px-4 py-2">
-                          <code className="bg-blue-50 text-ville-primary px-1.5 py-0.5 rounded text-xs font-mono">
-                            {"{{" + v.nom + "}}"}
-                          </code>
-                        </td>
-                        <td className="px-4 py-2 text-gray-600">{v.description}</td>
-                        <td className="px-4 py-2 text-gray-400 italic">{v.exemple}</td>
+                      <tr key={v.nom} className="border-b border-gray-50">
+                        <td className="py-1 pr-4 font-mono">{`{{${v.nom}}}`}</td>
+                        <td className="py-1 pr-4">{v.description}</td>
+                        <td className="py-1 text-gray-400">{v.exemple}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -274,31 +258,62 @@ export default function ParametrageAttestations() {
               </div>
             </div>
             <div>
-              <h3 className="font-semibold text-sm text-ville-dark mb-3">Variables systeme</h3>
-              <div className="bg-gray-50 rounded-lg overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-gray-100">
-                      <th className="text-left px-4 py-2 font-semibold text-gray-600">Variable</th>
-                      <th className="text-left px-4 py-2 font-semibold text-gray-600">Description</th>
-                      <th className="text-left px-4 py-2 font-semibold text-gray-600">Exemple</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
+              <p className="font-medium text-ville-dark mb-1">3. Variables systeme</p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs mt-2">
+                  <thead><tr className="border-b border-gray-200">
+                    <th className="text-left py-1 pr-4">Variable</th>
+                    <th className="text-left py-1 pr-4">Description</th>
+                    <th className="text-left py-1">Exemple</th>
+                  </tr></thead>
+                  <tbody>
                     {VARIABLES_SYSTEME.map((v) => (
-                      <tr key={v.nom} className="hover:bg-gray-50">
-                        <td className="px-4 py-2">
-                          <code className="bg-green-50 text-green-700 px-1.5 py-0.5 rounded text-xs font-mono">
-                            {"{{" + v.nom + "}}"}
-                          </code>
-                        </td>
-                        <td className="px-4 py-2 text-gray-600">{v.description}</td>
-                        <td className="px-4 py-2 text-gray-400 italic">{v.exemple}</td>
+                      <tr key={v.nom} className="border-b border-gray-50">
+                        <td className="py-1 pr-4 font-mono">{`{{${v.nom}}}`}</td>
+                        <td className="py-1 pr-4">{v.description}</td>
+                        <td className="py-1 text-gray-400">{v.exemple}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
+            </div>
+            <div>
+              <p className="font-medium text-ville-dark mb-1">4. Variables custom (saisies a la generation)</p>
+              <p className="text-gray-600 mb-2">
+                Vous pouvez ajouter des variables specifiques au template. Chaque variable a une description qui sera demandee lors de la generation.
+                Dans le document, utilisez {`{{variable1}}`}, {`{{variable2}}`}, etc.
+              </p>
+              <p className="text-gray-500 italic">
+                Exemple : vous ajoutez une variable avec la description "Motif de la demande". Dans le docx, vous ecrivez {`{{variable1}}`}.
+                Lors de la generation, un champ "Motif de la demande" sera affiche pour saisie libre.
+              </p>
+            </div>
+            <div>
+              <p className="font-medium text-ville-dark mb-1">5. Multi-usagers</p>
+              <p className="text-gray-600 mb-1">
+                Pour les templates concernant plusieurs usagers (concubinage, etc.), selectionnez 2 ou 3 usagers.
+                Vous pouvez nommer chaque slot de variables (ex: "Demandeur", "Beneficiaire").
+              </p>
+              <p className="text-gray-600 text-xs">
+                Les variables seront prefixees par le label en minuscule : {`{{demandeur_nom}}`}, {`{{beneficiaire_prenom}}`}, etc.
+                Les variables sans prefixe (directes) sont disponibles pour les templates 1 usager.
+              </p>
+            </div>
+            <div>
+              <button
+                onClick={() => setVarsOuvert(!varsOuvert)}
+                className="flex items-center gap-1 text-ville-primary hover:text-blue-700 font-medium"
+              >
+                {varsOuvert ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                Voir les variables disponibles avec prefixe
+              </button>
+              {varsOuvert && (
+                <p className="text-xs text-gray-500 mt-1 ml-4">
+                  Pour un template 2 usagers avec label 1="Demandeur", label 2="Beneficiaire", les variables sont :
+                  {` {{demandeur_civilite}}`}, {` {{demandeur_nom}}`}, {` {{beneficiaire_civilite}}`}, etc.
+                </p>
+              )}
             </div>
           </div>
         )}
@@ -338,12 +353,16 @@ export default function ParametrageAttestations() {
               onChange={(e) => setUploadNbUsagers(Number(e.target.value))}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-ville-primary focus:border-transparent"
             >
-              <option value={1}>1 usager (ex: Attestation de domicile)</option>
-              <option value={2}>2 usagers (ex: Attestation de concubinage)</option>
+              {NB_USAGERS_OPTIONS.map((n) => (
+                <option key={n} value={n}>{NB_USAGERS_LABELS[n]}</option>
+              ))}
             </select>
+            {uploadNbUsagers > 1 && (
+              <LabelsEditor nbUsagers={uploadNbUsagers} value={uploadLabels} onChange={setUploadLabels} />
+            )}
             <p className="text-xs text-gray-400 mt-1">
-              {uploadNbUsagers === 2
-                ? "Les variables seront prefixees par usager1_ et usager2_ (ex: {{usager1_nom}}, {{usager2_nom}})."
+              {uploadNbUsagers > 1
+                ? "Les variables seront prefixees par le label de chaque usager en minuscule (ex: {{demandeur_nom}})."
                 : "Les variables de l'usager sont accessibles directement (ex: {{nom}}, {{prenom}})."}
             </p>
           </div>
@@ -361,16 +380,10 @@ export default function ParametrageAttestations() {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Variables supplementaires (optionnel)
             </label>
-            <input
-              type="text"
-              value={uploadVars}
-              onChange={(e) => setUploadVars(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-ville-primary focus:border-transparent"
-              placeholder="Ex: motif, reference_dossier, nom_responsable"
-            />
+            <VariablesEditor value={uploadVars} onChange={setUploadVars} />
             <p className="text-xs text-gray-400 mt-1">
-              Separez par des virgules. Ces variables seront disponibles pour les valeurs custom lors de la generation.
-              Les variables de l'usager ({`{{nom}}`}, {`{{prenom}}`}, etc.) sont fusionnees automatiquement sans declaration.
+              Decrivez chaque variable. Elle sera accessible dans le document sous la forme {`{{variable1}}`}, {`{{variable2}}`}, etc.
+              A la generation, un champ de saisie sera affiche avec la description comme intitule.
             </p>
           </div>
           <div className="flex gap-2">
@@ -408,8 +421,11 @@ export default function ParametrageAttestations() {
                   <p className="text-xs text-gray-400 mt-1">
                     Fichier : {t.fichier_original}
                     {t.nb_usagers > 1 && <> | {t.nb_usagers} usagers</>}
+                    {t.nb_usagers > 1 && t.usager_labels && Object.keys(t.usager_labels).length > 0 && (
+                      <> ({Object.entries(t.usager_labels).sort().map(([, v], i) => `${i > 0 ? ", " : ""}${v}`).join("")})</>
+                    )}
                     {t.variables && t.variables.length > 0 && (
-                      <> | Variables custom : {t.variables.join(", ")}</>
+                      <> | {t.variables.length} variable{t.variables.length > 1 ? "s" : ""} custom</>
                     )}
                   </p>
                   <p className="text-xs text-gray-400 mt-0.5">
@@ -468,20 +484,20 @@ export default function ParametrageAttestations() {
                   onChange={(e) => setEditNbUsagers(Number(e.target.value))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-ville-primary focus:border-transparent"
                 >
-                  <option value={1}>1 usager</option>
-                  <option value={2}>2 usagers</option>
+                  {NB_USAGERS_OPTIONS.map((n) => (
+                    <option key={n} value={n}>{NB_USAGERS_LABELS[n]}</option>
+                  ))}
                 </select>
+                {editNbUsagers > 1 && (
+                  <LabelsEditor nbUsagers={editNbUsagers} value={editLabels} onChange={setEditLabels} />
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Variables supplementaires</label>
-                <input
-                  type="text"
-                  value={editVars}
-                  onChange={(e) => setEditVars(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-ville-primary focus:border-transparent"
-                  placeholder="Ex: motif, reference_dossier"
-                />
-                <p className="text-xs text-gray-400 mt-1">Separez par des virgules.</p>
+                <VariablesEditor value={editVars} onChange={setEditVars} />
+                <p className="text-xs text-gray-400 mt-1">
+                  Chaque description correspond a {`{{variable1}}`}, {`{{variable2}}`}, etc. dans le document.
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Remplacer le fichier .docx (optionnel)</label>

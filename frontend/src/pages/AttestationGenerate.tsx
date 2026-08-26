@@ -16,13 +16,16 @@ export default function AttestationGenerate() {
   const [selectedTemplate, setSelectedTemplate] = useState("");
   const [selectedUsager, setSelectedUsager] = useState(preselectedUsager);
   const [selectedUsager2, setSelectedUsager2] = useState("");
+  const [selectedUsager3, setSelectedUsager3] = useState("");
   const [customData, setCustomData] = useState<Record<string, string>>({});
   const [generating, setGenerating] = useState(false);
   const [searchUsager, setSearchUsager] = useState("");
   const [searchUsager2, setSearchUsager2] = useState("");
+  const [searchUsager3, setSearchUsager3] = useState("");
 
   const activeTemplate = templates.find((t) => t.id === selectedTemplate);
-  const needUsager2 = activeTemplate?.nb_usagers === 2;
+  const nbUsagers = activeTemplate?.nb_usagers || 1;
+  const labels = activeTemplate?.usager_labels || {};
 
   useEffect(() => {
     attestationsApi.listTemplates().then((res) => setTemplates(res.data.rows));
@@ -42,11 +45,17 @@ export default function AttestationGenerate() {
       const tpl = templates.find((t) => t.id === selectedTemplate);
       if (tpl && tpl.variables) {
         const initial: Record<string, string> = {};
-        tpl.variables.forEach((v) => { initial[v] = ""; });
+        tpl.variables.forEach((_desc, i) => {
+          initial[`variable${i + 1}`] = "";
+        });
         setCustomData(initial);
+      } else {
+        setCustomData({});
       }
     }
   }, [selectedTemplate, templates]);
+
+  const getLabel = (key: string) => labels[key] || `Usager ${key}`;
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,15 +63,20 @@ export default function AttestationGenerate() {
       toast.error("Selectionnez un usager et un template");
       return;
     }
-    if (needUsager2 && !selectedUsager2) {
+    if (nbUsagers >= 2 && !selectedUsager2) {
       toast.error("Selectionnez le second usager pour ce template");
+      return;
+    }
+    if (nbUsagers >= 3 && !selectedUsager3) {
+      toast.error("Selectionnez le troisieme usager pour ce template");
       return;
     }
     setGenerating(true);
     try {
       const res = await attestationsApi.generate({
         usager_id: selectedUsager,
-        usager2_id: needUsager2 ? selectedUsager2 : undefined,
+        usager2_id: nbUsagers >= 2 ? selectedUsager2 : undefined,
+        usager3_id: nbUsagers >= 3 ? selectedUsager3 : undefined,
         template_id: selectedTemplate,
         custom_data: Object.keys(customData).length > 0 ? customData : undefined,
       });
@@ -160,6 +174,7 @@ export default function AttestationGenerate() {
               setSelectedTemplate(e.target.value);
               setSelectedUsager(preselectedUsager);
               setSelectedUsager2("");
+              setSelectedUsager3("");
             }}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
           >
@@ -172,8 +187,8 @@ export default function AttestationGenerate() {
           </select>
           {activeTemplate && (
             <p className="text-xs text-gray-400 mt-1">
-              {activeTemplate.nb_usagers > 1
-                ? `Ce template concerne ${activeTemplate.nb_usagers} usagers. Les variables seront prefixees par usager1_ et usager2_.`
+              {nbUsagers > 1
+                ? `Ce template concerne ${nbUsagers} usagers. Les variables seront prefixees par le label de chaque usager.`
                 : "Variables de l'usager accessibles directement ({{nom}}, {{prenom}}...)."}
             </p>
           )}
@@ -182,40 +197,54 @@ export default function AttestationGenerate() {
         {selectedTemplate && (
           <>
             {renderUsagerSelector(
-              "Selection de l'usager principal",
+              `Selection de l'usager : ${getLabel("1")}`,
               selectedUsager,
               setSelectedUsager,
               searchUsager,
               setSearchUsager
             )}
-            {needUsager2 && renderUsagerSelector(
-              "Selection du second usager",
+            {nbUsagers >= 2 && renderUsagerSelector(
+              `Selection de l'usager : ${getLabel("2")}`,
               selectedUsager2,
               setSelectedUsager2,
               searchUsager2,
               setSearchUsager2
             )}
+            {nbUsagers >= 3 && renderUsagerSelector(
+              `Selection de l'usager : ${getLabel("3")}`,
+              selectedUsager3,
+              setSelectedUsager3,
+              searchUsager3,
+              setSearchUsager3
+            )}
           </>
         )}
 
-        {selectedTemplate && Object.keys(customData).length > 0 && (
+        {selectedTemplate && activeTemplate?.variables && activeTemplate.variables.length > 0 && (
           <section>
             <h2 className="text-lg font-semibold text-ville-primary mb-4">Variables supplementaires</h2>
             <p className="text-sm text-gray-500 mb-4">
-              Ces variables seront remplacees dans le template. Les champs de l'usager sont merges automatiquement.
+              Renseignez les valeurs pour chaque variable definie dans le template.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {Object.keys(customData).map((key) => (
-                <div key={key}>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{key}</label>
-                  <input
-                    type="text"
-                    value={customData[key]}
-                    onChange={(e) => setCustomData((prev) => ({ ...prev, [key]: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                  />
-                </div>
-              ))}
+              {activeTemplate.variables.map((desc, i) => {
+                const key = `variable${i + 1}`;
+                return (
+                  <div key={key}>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {desc || key}
+                    </label>
+                    <input
+                      type="text"
+                      value={customData[key] || ""}
+                      onChange={(e) => setCustomData((prev) => ({ ...prev, [key]: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      placeholder={desc || `Valeur de ${key}`}
+                    />
+                    <p className="text-xs text-gray-400 mt-0.5 font-mono">{`{{${key}}}`}</p>
+                  </div>
+                );
+              })}
             </div>
           </section>
         )}
@@ -230,7 +259,7 @@ export default function AttestationGenerate() {
           </button>
           <button
             type="submit"
-            disabled={generating || !selectedUsager || !selectedTemplate || (needUsager2 && !selectedUsager2)}
+            disabled={generating || !selectedUsager || !selectedTemplate || (nbUsagers >= 2 && !selectedUsager2) || (nbUsagers >= 3 && !selectedUsager3)}
             className="flex items-center gap-2 bg-ville-primary text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition disabled:opacity-50 text-sm"
           >
             <FileText size={16} />

@@ -20,9 +20,9 @@ const attestationRepository = {
 
   async createTemplate(data) {
     const result = await db.run(
-      `INSERT INTO ${TABLE_TEMPLATES} (nom, description, fichier_original, variables, nb_usagers)
-       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [data.nom, data.description || null, data.fichier_original, JSON.stringify(data.variables || []), data.nb_usagers || 1]
+      `INSERT INTO ${TABLE_TEMPLATES} (nom, description, fichier_original, variables, nb_usagers, usager_labels)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [data.nom, data.description || null, data.fichier_original, JSON.stringify(data.variables || []), data.nb_usagers || 1, data.usager_labels ? JSON.stringify(data.usager_labels) : null]
     );
     return result.rows ? result.rows[0] : result;
   },
@@ -31,10 +31,10 @@ const attestationRepository = {
     const fields = [];
     const params = [];
     let idx = 1;
-    for (const key of ["nom", "description", "fichier_original", "variables", "actif", "nb_usagers"]) {
+    for (const key of ["nom", "description", "fichier_original", "variables", "actif", "nb_usagers", "usager_labels"]) {
       if (data[key] !== undefined) {
         fields.push(`"${key}" = $${idx}`);
-        params.push(key === "variables" ? JSON.stringify(data[key]) : data[key]);
+        params.push((key === "variables" || key === "usager_labels") ? JSON.stringify(data[key]) : data[key]);
         idx++;
       }
     }
@@ -48,10 +48,11 @@ const attestationRepository = {
   },
 
   async findAll({ statut, usager_id, limit = 50, offset = 0 } = {}) {
-    let query = `SELECT a.*, u.nom as usager_nom, u.prenom as usager_prenom, u2.nom as usager2_nom, u2.prenom as usager2_prenom, t.nom as template_nom
+    let query = `SELECT a.*, u.nom as usager_nom, u.prenom as usager_prenom, u2.nom as usager2_nom, u2.prenom as usager2_prenom, u3.nom as usager3_nom, u3.prenom as usager3_prenom, t.nom as template_nom
       FROM ${TABLE_ATTESTATIONS} a
       LEFT JOIN "${SCHEMA_NAME}".usagers u ON a.usager_id = u.id
       LEFT JOIN "${SCHEMA_NAME}".usagers u2 ON a.usager2_id = u2.id
+      LEFT JOIN "${SCHEMA_NAME}".usagers u3 ON a.usager3_id = u3.id
       LEFT JOIN ${TABLE_TEMPLATES} t ON a.template_id = t.id
       WHERE 1=1`;
     const params = [];
@@ -76,10 +77,11 @@ const attestationRepository = {
 
   async findAttestationById(id) {
     return db.get(
-      `SELECT a.*, u.nom as usager_nom, u.prenom as usager_prenom, u2.nom as usager2_nom, u2.prenom as usager2_prenom, t.nom as template_nom
+      `SELECT a.*, u.nom as usager_nom, u.prenom as usager_prenom, u2.nom as usager2_nom, u2.prenom as usager2_prenom, u3.nom as usager3_nom, u3.prenom as usager3_prenom, t.nom as template_nom
        FROM ${TABLE_ATTESTATIONS} a
        LEFT JOIN "${SCHEMA_NAME}".usagers u ON a.usager_id = u.id
        LEFT JOIN "${SCHEMA_NAME}".usagers u2 ON a.usager2_id = u2.id
+       LEFT JOIN "${SCHEMA_NAME}".usagers u3 ON a.usager3_id = u3.id
        LEFT JOIN ${TABLE_TEMPLATES} t ON a.template_id = t.id
        WHERE a.id = $1`,
       [id]
@@ -88,10 +90,10 @@ const attestationRepository = {
 
   async create(data) {
     const result = await db.run(
-      `INSERT INTO ${TABLE_ATTESTATIONS} (usager_id, usager2_id, template_id, titre, contenu_genere, fichier_pdf, statut, date_generation, genere_par)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+      `INSERT INTO ${TABLE_ATTESTATIONS} (usager_id, usager2_id, usager3_id, template_id, titre, contenu_genere, fichier_pdf, statut, date_generation, genere_par)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
       [
-        data.usager_id, data.usager2_id || null, data.template_id, data.titre,
+        data.usager_id, data.usager2_id || null, data.usager3_id || null, data.template_id, data.titre,
         JSON.stringify(data.contenu_genere || {}),
         data.fichier_pdf || null, data.statut || "brouillon",
         data.date_generation || null, data.genere_par || null,
