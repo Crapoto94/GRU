@@ -66,7 +66,7 @@ router.get("/status", async (_req, res) => {
       max: 1,
     });
     const configRes = await configPool.query(
-      `SELECT cle, valeur FROM "gru".config_params WHERE cle IN ('api_ville_url', 'api_ville_port', 'api_ville_token')`
+      `SELECT cle, valeur FROM "${process.env.SCHEMA_NAME || "gru"}".config_params WHERE cle IN ('api_ville_url', 'api_ville_port', 'api_ville_token')`
     );
     await configPool.end();
     const config = {};
