@@ -7,7 +7,7 @@ const swaggerJsdoc = require("swagger-jsdoc");
 const swaggerUi = require("swagger-ui-express");
 
 const { setupDb, pool, SCHEMA_NAME } = require("./config/pg_db");
-const { authenticateToken } = require("./middleware/auth");
+const { authenticateToken, requireRole } = require("./middleware/auth");
 const healthRoutes = require("./modules/health/health.routes");
 const authRoutes = require("./modules/auth/auth.routes");
 const usagerRoutes = require("./modules/usagers/usagers.routes");

@@ -5,10 +5,12 @@ import { Search, Plus, Archive, RotateCcw, Trash2, ChevronLeft, ChevronRight, Fi
 import toast from "react-hot-toast";
 import { formatNom, formatPrenom } from "../utils/format";
 import { usagersApi, attestationsApi } from "../services/api";
+import { useAuth } from "../contexts/AuthContext";
 import type { Usager, Attestation } from "../types";
 
 export default function UsagersList() {
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
   const [usagers, setUsagers] = useState<Usager[]>([]);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState("");
@@ -199,9 +201,11 @@ export default function UsagersList() {
                           <Archive size={16} />
                         </button>
                       )}
-                      <button onClick={() => handleDelete(u.id)} className="p-1 text-red-600 hover:bg-red-50 rounded" title="Supprimer">
-                        <Trash2 size={16} />
-                      </button>
+                      {isAdmin && (
+                        <button onClick={() => handleDelete(u.id)} className="p-1 text-red-600 hover:bg-red-50 rounded" title="Supprimer">
+                          <Trash2 size={16} />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </motion.tr>

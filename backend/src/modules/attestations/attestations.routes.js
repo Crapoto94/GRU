@@ -3,6 +3,7 @@ const path = require("path");
 const fs = require("fs");
 const multer = require("multer");
 const attestationService = require("./attestations.service");
+const { requireRole } = require("../../middleware/auth");
 
 const router = express.Router();
 
@@ -168,7 +169,7 @@ router.post("/templates/upload", upload.single("file"), async (req, res, next) =
  *       204:
  *         description: Template supprime
  */
-router.delete("/templates/:id", async (req, res, next) => {
+router.delete("/templates/:id", requireRole("administrateur"), async (req, res, next) => {
   try {
     const attestationRepository = require("./attestations.repository");
     const existing = await attestationRepository.findTemplateById(req.params.id);
@@ -451,7 +452,7 @@ router.get("/:id/download", async (req, res, next) => {
  *       204:
  *         description: Supprime
  */
-router.delete("/:id", async (req, res, next) => {
+router.delete("/:id", requireRole("administrateur"), async (req, res, next) => {
   try {
     await attestationService.remove(req.params.id, req.user?.login || "system", req.ip);
     res.status(204).send();

@@ -4,10 +4,12 @@ import { Plus, Download, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { formatNom, formatPrenom } from "../utils/format";
 import { attestationsApi } from "../services/api";
+import { useAuth } from "../contexts/AuthContext";
 import type { Attestation } from "../types";
 
 export default function AttestationsList() {
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
   const [attestations, setAttestations] = useState<Attestation[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -133,13 +135,15 @@ export default function AttestationsList() {
                           <Download size={16} />
                         </button>
                       )}
-                      <button
-                        onClick={() => handleDelete(a.id)}
-                        className="p-1 text-red-600 hover:bg-red-50 rounded"
-                        title="Supprimer"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      {isAdmin && (
+                        <button
+                          onClick={() => handleDelete(a.id)}
+                          className="p-1 text-red-600 hover:bg-red-50 rounded"
+                          title="Supprimer"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const usagerService = require("./usagers.service");
 const { validateAdresse } = require("../../utils/validators");
+const { requireRole } = require("../../middleware/auth");
 
 /**
  * @openapi
@@ -268,7 +269,7 @@ router.post("/:id/restore", async (req, res, next) => {
  *       204:
  *         description: Supprime
  */
-router.delete("/:id", async (req, res, next) => {
+router.delete("/:id", requireRole("administrateur"), async (req, res, next) => {
   try {
     await usagerService.remove(req.params.id, req.user?.login || "system", req.ip);
     res.status(204).send();
