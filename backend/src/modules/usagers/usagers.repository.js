@@ -50,13 +50,16 @@ const usagerRepository = {
   },
 
   async update(id, data) {
+    if (data.Adresse !== undefined && data.adresse === undefined) {
+      data.adresse = data.Adresse;
+    }
     const fields = [];
     const params = [];
     let idx = 1;
     const allowed = [
       "civilite", "nom", "prenom", "nom_usage", "date_naissance", "lieu_naissance",
       "pays_naissance", "nationalite", "situation_familiale", "email", "telephone", "mobile",
-      "Adresse", "complement_adresse", "code_postal", "ville", "pays", "mail_actif",
+      "adresse", "complement_adresse", "code_postal", "ville", "pays", "mail_actif",
     ];
     for (const key of allowed) {
       if (data[key] !== undefined) {

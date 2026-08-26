@@ -232,9 +232,10 @@ export default function UsagerForm() {
   }, []);
 
   const selectAdresse = (s: AdresseSuggestion) => {
+    const rue = [s.numero, s.street].filter(Boolean).join(" ");
     setForm((prev) => ({
       ...prev,
-      Adresse: s.label || "",
+      Adresse: rue || s.label || "",
       code_postal: s.postcode || "",
       ville: s.city || "",
     }));
