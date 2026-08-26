@@ -10,7 +10,8 @@ const VARIABLES_USAGER = [
   { nom: "prenom", description: "Prenom de l'usager", exemple: "Jean" },
   { nom: "nom_complet", description: "Civilite + Prenom + Nom (genere automatiquement)", exemple: "M. Jean DUPONT" },
   { nom: "nom_usage", description: "Nom d'usage (le cas echeant)", exemple: "Martin" },
-  { nom: "date_naissance", description: "Date de naissance au format francais", exemple: "15/03/1985" },
+  { nom: "date_naissance", description: "Date de naissance au format francais court", exemple: "15/03/1985" },
+  { nom: "date_naissance_long", description: "Date de naissance en toutes lettres", exemple: "15 mars 1985" },
   { nom: "lieu_naissance", description: "Lieu de naissance", exemple: "Paris" },
   { nom: "pays_naissance", description: "Pays de naissance", exemple: "France" },
   { nom: "nationalite", description: "Nationalite de l'usager", exemple: "Francaise" },
@@ -138,7 +139,7 @@ export default function ParametrageAttestations() {
                   Je soussigne(e), <span className="bg-ville-primary/10 px-1 rounded text-ville-primary">{"{{nom_complet}}"}</span>,
                 </p>
                 <p className="mt-1">
-                  ne(e) le <span className="bg-ville-primary/10 px-1 rounded text-ville-primary">{"{{date_naissance}}"}</span>
+                  ne(e) le <span className="bg-ville-primary/10 px-1 rounded text-ville-primary">{"{{date_naissance_long}}"}</span>
                   {" "}a <span className="bg-ville-primary/10 px-1 rounded text-ville-primary">{"{{lieu_naissance}}"}</span>,
                 </p>
                 <p className="mt-1">

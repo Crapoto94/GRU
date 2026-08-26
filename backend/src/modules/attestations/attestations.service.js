@@ -20,6 +20,13 @@ function prepareUsagerData(usager) {
     date_naissance: usager.date_naissance
       ? new Date(usager.date_naissance).toLocaleDateString("fr-FR")
       : "",
+    date_naissance_long: usager.date_naissance
+      ? new Date(usager.date_naissance).toLocaleDateString("fr-FR", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        })
+      : "",
     lieu_naissance: usager.lieu_naissance || "",
     pays_naissance: usager.pays_naissance || "",
     nationalite: usager.nationalite || "",
