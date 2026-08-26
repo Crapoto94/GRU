@@ -22,7 +22,7 @@ services:
         VITE_API_URL: ${VITE_API_URL}
     restart: always
     ports:
-      - "3220:3220"
+      - "3220:80"
 
 volumes:
   uploads:
