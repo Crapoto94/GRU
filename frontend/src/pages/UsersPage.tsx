@@ -157,12 +157,25 @@ export default function UsersPage() {
   const selectADUser = async (ad: ADUser) => {
     setAdSelected(ad);
     const identifier = ad.sAMAccountName || "";
-    let fullDetails = ad;
+    let fullDetails: ADUser = { ...ad };
     try {
       const res = await api.get("/api/v1/ad/user", { params: { identifier } });
-      fullDetails = res.data.user || res.data;
+      const u = res.data.user || res.data;
+      if (u) {
+        fullDetails = {
+          ...fullDetails,
+          sAMAccountName: u.sAMAccountName || u.samaccountname || fullDetails.sAMAccountName,
+          sn: u.sn || u.surname || u.lastName || fullDetails.sn,
+          givenName: u.givenName || u.givenname || u.firstName || fullDetails.givenName,
+          mail: u.mail || u.email || fullDetails.mail,
+          title: u.title || u.jobTitle || fullDetails.title,
+          department: u.department || fullDetails.department,
+          company: u.company || fullDetails.company,
+          dn: u.dn || fullDetails.dn,
+        };
+      }
     } catch {
-      // fallback aux donnees de la recherche
+      // on garde les donnees de la recherche
     }
     setForm({
       login: fullDetails.sAMAccountName || identifier,
