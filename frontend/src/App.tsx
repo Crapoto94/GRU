@@ -13,6 +13,7 @@ import AttestationGenerate from "./pages/AttestationGenerate";
 import ParametrageAttestations from "./pages/ParametrageAttestations";
 import ParametrageDatabase from "./pages/ParametrageDatabase";
 import ParametrageApiVille from "./pages/ParametrageApiVille";
+import ParametrageSynbird from "./pages/ParametrageSynbird";
 import UsersPage from "./pages/UsersPage";
 import LogsPage from "./pages/LogsPage";
 
@@ -57,6 +58,7 @@ export default function App() {
                   <Route path="/parametrage/attestations" element={<ParametrageAttestations />} />
                   <Route path="/parametrage/base-de-donnees" element={<ParametrageDatabase />} />
                   <Route path="/parametrage/api-ville" element={<ParametrageApiVille />} />
+                  <Route path="/parametrage/synbird" element={<ParametrageSynbird />} />
                   <Route path="/parametrage/utilisateurs" element={<UsersPage />} />
                   <Route path="/parametrage/logs" element={<LogsPage />} />
                   <Route path="*" element={<Navigate to="/" replace />} />

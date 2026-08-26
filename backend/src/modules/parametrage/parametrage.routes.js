@@ -215,4 +215,120 @@ router.post("/api-ville/test", async (_req, res, next) => {
   }
 });
 
-module.exports = router;
+// Synbird API configuration
+/**
+ * @openapi
+ * /api/v1/parametrage/synbird:
+ *   get:
+ *     tags: [Parametrage]
+ *     summary: Recuperer la configuration de l'API Synbird (RDV)
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Configuration API Synbird
+ */
+router.get("/synbird", async (_req, res, next) => {
+  try {
+    const rows = await getAllConfig();
+    const config = {};
+    for (const r of rows) config[r.cle] = r.valeur;
+    res.json({
+      url: config.synbird_url || "",
+      token: config.synbird_token || "",
+      description: config.synbird_description || "API Synbird - Gestion des RDV",
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * @openapi
+ * /api/v1/parametrage/synbird:
+ *   put:
+ *     tags: [Parametrage]
+ *     summary: Modifier la configuration de l'API Synbird
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               url:
+ *                 type: string
+ *               token:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Configuration mise a jour
+ */
+router.put("/synbird", async (req, res, next) => {
+  try {
+    const { url, token, description } = req.body;
+    await setConfig("synbird_url", url || "", "URL de base de l'API Synbird");
+    await setConfig("synbird_token", token || "", "Token d'authentification API Synbird");
+    await setConfig("synbird_description", description || "", "Description de l'API Synbird");
+    res.json({ url, token, description });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * @openapi
+ * /api/v1/parametrage/synbird/test:
+ *   post:
+ *     tags: [Parametrage]
+ *     summary: Tester la connexion a l'API Synbird
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Test de connexion Synbird
+ */
+router.post("/synbird/test", async (_req, res, next) => {
+  try {
+    const url = await getConfig("synbird_url");
+    const token = await getConfig("synbird_token");
+    if (!url) {
+      throw Object.assign(new Error("URL de l'API Synbird non configuree"), { status: 400 });
+    }
+    const baseUrl = url;
+    const start = Date.now();
+    try {
+      const response = await axios.get(baseUrl, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        timeout: 5000,
+        httpsAgent: new (require("https").Agent)({ rejectUnauthorized: false }),
+        validateStatus: () => true,
+      });
+      const ms = Date.now() - start;
+      res.status(200).json({
+        ok: true,
+        statusCode: response.status,
+        latency: ms,
+        baseUrl,
+        message: `Serveur repondu en ${response.status}`,
+      });
+    } catch (apiErr) {
+      const ms = Date.now() - start;
+      res.status(200).json({
+        ok: false,
+        statusCode: apiErr.response?.status || 0,
+        message: apiErr.message,
+        latency: ms,
+        baseUrl,
+      });
+    }
+  } catch (err) {
+    next(err);
+  }
+});
+
+

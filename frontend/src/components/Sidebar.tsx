@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { Users, FileText, Layout, Settings, LogOut, Database, Shield, Globe, ScrollText, Info, HelpCircle } from "lucide-react";
+import { Users, FileText, Layout, Settings, LogOut, Database, Shield, Globe, ScrollText, Info, HelpCircle, Calendar } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { getVersion, formatVersion } from "../services/version";
@@ -81,6 +81,10 @@ export default function Sidebar() {
               <NavLink to="/parametrage/api-ville" className={subLinkClass}>
                 <Globe size={14} />
                 API Ville
+              </NavLink>
+              <NavLink to="/parametrage/synbird" className={subLinkClass}>
+                <Calendar size={14} />
+                API Synbird (RDV)
               </NavLink>
               <NavLink to="/parametrage/utilisateurs" className={subLinkClass}>
                 <Shield size={14} />
