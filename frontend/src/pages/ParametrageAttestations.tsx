@@ -10,7 +10,7 @@ const VARIABLES_USAGER = [
   { nom: "nom", description: "Nom de famille de l'usager", exemple: "DUPONT" },
   { nom: "prenom", description: "Prenom de l'usager", exemple: "Jean" },
   { nom: "nom_complet", description: "Civilite + Prenom + Nom (genere automatiquement)", exemple: "M. Jean DUPONT" },
-  { nom: "nom_usage", description: "Nom d'usage (le cas echeant)", exemple: "Martin" },
+  { nom: "nom_usage", description: "Nom d'usage entre parentheses (vide si absent)", exemple: "(MARTIN)" },
   { nom: "date_naissance", description: "Date de naissance au format francais court", exemple: "15/03/1985" },
   { nom: "date_naissance_long", description: "Date de naissance en toutes lettres", exemple: "15 mars 1985" },
   { nom: "lieu_naissance", description: "Lieu de naissance", exemple: "Paris" },
