@@ -45,8 +45,13 @@ export default function AttestationGenerate() {
       const tpl = templates.find((t) => t.id === selectedTemplate);
       if (tpl && tpl.variables) {
         const initial: Record<string, string> = {};
-        tpl.variables.forEach((_desc, i) => {
-          initial[`variable${i + 1}`] = "";
+        tpl.variables.forEach((varDef, i) => {
+          const key = `variable${i + 1}`;
+          if (varDef.allowedValues && varDef.allowedValues.length > 0) {
+            initial[key] = varDef.allowedValues[0];
+          } else {
+            initial[key] = "";
+          }
         });
         setCustomData(initial);
       } else {
@@ -224,24 +229,56 @@ export default function AttestationGenerate() {
           <section>
             <h2 className="text-lg font-semibold text-ville-primary mb-4">Variables supplementaires</h2>
             <p className="text-sm text-gray-500 mb-4">
-              Renseignez les valeurs pour chaque variable definie dans le template.
+              Pour chaque variable definie dans le template, saisissez une valeur.
+              Si des valeurs autorisees sont defines, une liste deroulante apparait.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {activeTemplate.variables.map((desc, i) => {
+              {activeTemplate.variables.map((varDef, i) => {
                 const key = `variable${i + 1}`;
-                return (
-                  <div key={key}>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      {desc || key}
-                    </label>
+                const hasOptions = varDef.allowedValues && varDef.allowedValues.length > 0;
+                
+                let inputElement;
+                if (hasOptions) {
+                  inputElement = (
+                    <select
+                      value={customData[key] || varDef.allowedValues![0]}
+                      onChange={(e) =>
+                        setCustomData((prev) => ({
+                          ...prev,
+                          [key]: e.target.value,
+                        }))
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    >
+                      <option value="">Sélectionner</option>
+                      {varDef.allowedValues!.map((val) => (
+                        <option key={val} value={val}>{val}</option>
+                      ))}
+                    </select>
+                  );
+                } else {
+                  inputElement = (
                     <input
                       type="text"
                       value={customData[key] || ""}
-                      onChange={(e) => setCustomData((prev) => ({ ...prev, [key]: e.target.value }))}
+                      onChange={(e) =>
+                        setCustomData((prev) => ({ ...prev, [key]: e.target.value }))
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                      placeholder={desc || `Valeur de ${key}`}
+                      placeholder={varDef.description || `Valeur de ${key}`}
                     />
-                    <p className="text-xs text-gray-400 mt-0.5 font-mono">{`{{${key}}}`}</p>
+                  );
+                }
+                
+                return (
+                  <div key={key} className="p-3 border rounded bg-gray-50 group">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {varDef.description || key}
+                    </label>
+                    {inputElement}
+                    <p className="text-xs text-gray-400 mt-1 font-mono">
+                      {`{{${key}}}`}
+                    </p>
                   </div>
                 );
               })}

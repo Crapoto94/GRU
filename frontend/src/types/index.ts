@@ -33,7 +33,7 @@ export interface Template {
   nom: string;
   description: string | null;
   fichier_original: string;
-  variables: string[];
+  variables: Array<{description: string; allowedValues?: string[]}>;
   nb_usagers: number;
   usager_labels: Record<string, string> | null;
   actif: boolean;

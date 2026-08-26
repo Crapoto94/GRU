@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { Users, FileText, Layout, Settings, LogOut, Database, Shield, Globe, ScrollText, Info } from "lucide-react";
+import { Users, FileText, Layout, Settings, LogOut, Database, Shield, Globe, ScrollText, Info, HelpCircle } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { getVersion, formatVersion } from "../services/version";
@@ -102,9 +102,14 @@ export default function Sidebar() {
         </div>
         <div className="flex items-center justify-between px-4 mb-2 text-xs text-gray-400">
           <span>Version {formatVersion(getVersion())}</span>
-          <button className="flex items-center gap-1 hover:text-ville-primary transition" onClick={() => window.dispatchEvent(new CustomEvent("open-whats-new"))}>
-            <Info size={12} /> Nouveautes
-          </button>
+          <div className="flex items-center gap-2">
+            <button className="flex items-center gap-1 hover:text-ville-primary transition" onClick={() => window.dispatchEvent(new CustomEvent("open-help"))}>
+              <HelpCircle size={12} /> Aide
+            </button>
+            <button className="flex items-center gap-1 hover:text-ville-primary transition" onClick={() => window.dispatchEvent(new CustomEvent("open-whats-new"))}>
+              <Info size={12} /> Nouveautes
+            </button>
+          </div>
         </div>
         <button
           onClick={handleLogout}

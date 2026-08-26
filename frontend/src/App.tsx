@@ -3,6 +3,7 @@ import { useAuth } from "./contexts/AuthContext";
 import { useState, useEffect } from "react";
 import Sidebar from "./components/Sidebar";
 import WhatsNewModal from "./components/WhatsNewModal";
+import HelpModal from "./components/HelpModal";
 import LoginPage from "./pages/LoginPage";
 import Dashboard from "./pages/Dashboard";
 import UsagersList from "./pages/UsagersList";
@@ -23,11 +24,17 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   const [showWhatsNew, setShowWhatsNew] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
 
   useEffect(() => {
-    const handler = () => setShowWhatsNew(true);
-    window.addEventListener("open-whats-new", handler);
-    return () => window.removeEventListener("open-whats-new", handler);
+    const handlerWhatsNew = () => setShowWhatsNew(true);
+    const handlerHelp = () => setShowHelp(true);
+    window.addEventListener("open-whats-new", handlerWhatsNew);
+    window.addEventListener("open-help", handlerHelp);
+    return () => {
+      window.removeEventListener("open-whats-new", handlerWhatsNew);
+      window.removeEventListener("open-help", handlerHelp);
+    };
   }, []);
 
   return (
@@ -57,6 +64,7 @@ export default function App() {
               </main>
             </div>
             <WhatsNewModal isOpen={showWhatsNew} onClose={() => setShowWhatsNew(false)} />
+            <HelpModal isOpen={showHelp} onClose={() => setShowHelp(false)} />
           </ProtectedRoute>
         }
       />

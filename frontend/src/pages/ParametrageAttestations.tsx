@@ -36,35 +36,65 @@ const VARIABLES_SYSTEME = [
 const NB_USAGERS_OPTIONS = [1, 2, 3];
 const NB_USAGERS_LABELS: Record<number, string> = { 1: "1 usager (ex: Attestation de domicile)", 2: "2 usagers (ex: Attestation de concubinage)", 3: "3 usagers (ex: Attestation familiale)" };
 
-function VariablesEditor({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
-  const add = () => onChange([...value, ""]);
+function VariablesEditor({ value, onChange }: { value: Array<{description: string; allowedValues?: string[]}>; onChange: (v: Array<{description: string; allowedValues?: string[]}>) => void }) {
+  const add = () => onChange([...value, {description: "", allowedValues: []}]);
   const remove = (i: number) => onChange(value.filter((_, idx) => idx !== i));
-  const update = (i: number, v: string) => {
+  const updateDesc = (i: number, v: string) => {
     const next = [...value];
-    next[i] = v;
+    next[i] = {...next[i], description: v};
+    onChange(next);
+  };
+  const updateAllowed = (i: number, vals: string) => {
+    const next = [...value];
+    next[i] = {...next[i], allowedValues: vals.split(",").map(s => s.trim()).filter(s => s)};
     onChange(next);
   };
   return (
     <div className="space-y-2">
-      {value.map((desc, i) => (
-        <div key={i} className="flex items-center gap-2">
-          <span className="text-xs font-mono text-gray-400 w-20 shrink-0">variable{i + 1}</span>
-          <input
-            type="text"
-            value={desc}
-            onChange={(e) => update(i, e.target.value)}
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-ville-primary focus:border-transparent"
-            placeholder="Description de la variable (ex: Motif de la demande)"
-          />
-          <button type="button" onClick={() => remove(i)} className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded shrink-0">
-            <X size={16} />
-          </button>
+      {value.map((varDef, i) => (
+        <div key={i} className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-mono text-gray-400 w-20 shrink-0">variable{i + 1}</span>
+            <input
+              type="text"
+              value={varDef.description}
+              onChange={(e) => updateDesc(i, e.target.value)}
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-ville-primary focus:border-transparent"
+              placeholder="Description de la variable (ex: Motif de la demande)"
+            />
+            <button type="button" onClick={() => remove(i)} className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded shrink-0">
+              <X size={16} />
+            </button>
+          </div>
+          <div className="pl-20">
+            <AllowedValuesInput
+              value={varDef.allowedValues?.join(", ") || ""}
+              onBlur={(vals) => updateAllowed(i, vals)}
+              placeholder="Valeurs autorisees separees par des virgules (optionnel) - ex: Oui, Non, Peut-etre"
+            />
+            <p className="text-xs text-gray-400 mt-1">Laissez vide pour un champ texte libre. Si rempli, une liste deroulante apparaitra.</p>
+          </div>
         </div>
       ))}
       <button type="button" onClick={add} className="flex items-center gap-1 text-sm text-ville-primary hover:text-blue-700 mt-1">
         <Plus size={14} /> Ajouter une variable
       </button>
     </div>
+  );
+}
+
+function AllowedValuesInput({ value, onBlur, placeholder }: { value: string; onBlur: (vals: string) => void; placeholder: string }) {
+  const [localValue, setLocalValue] = useState(value);
+  useEffect(() => { setLocalValue(value); }, [value]);
+  return (
+    <input
+      type="text"
+      value={localValue}
+      onChange={(e) => setLocalValue(e.target.value)}
+      onBlur={(e) => onBlur(e.target.value)}
+      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-ville-primary focus:border-transparent"
+      placeholder={placeholder}
+    />
   );
 }
 
@@ -94,7 +124,7 @@ export default function ParametrageAttestations() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [uploadNom, setUploadNom] = useState("");
   const [uploadDesc, setUploadDesc] = useState("");
-  const [uploadVars, setUploadVars] = useState<string[]>([]);
+  const [uploadVars, setUploadVars] = useState<Array<{description: string; allowedValues?: string[]}>>([]);
   const [uploadNbUsagers, setUploadNbUsagers] = useState(1);
   const [uploadLabels, setUploadLabels] = useState<Record<string, string>>({});
   const [uploadFile, setUploadFile] = useState<File | null>(null);
@@ -104,7 +134,7 @@ export default function ParametrageAttestations() {
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
   const [editNom, setEditNom] = useState("");
   const [editDesc, setEditDesc] = useState("");
-  const [editVars, setEditVars] = useState<string[]>([]);
+  const [editVars, setEditVars] = useState<Array<{description: string; allowedValues?: string[]}>>([]);
   const [editNbUsagers, setEditNbUsagers] = useState(1);
   const [editLabels, setEditLabels] = useState<Record<string, string>>({});
   const [editFile, setEditFile] = useState<File | null>(null);
@@ -135,9 +165,11 @@ export default function ParametrageAttestations() {
     formData.append("nom", uploadNom);
     formData.append("description", uploadDesc);
     formData.append("nb_usagers", String(uploadNbUsagers));
-    const descs = uploadVars.filter((v) => v.trim());
-    if (descs.length > 0) {
-      formData.append("variables", JSON.stringify(descs));
+    const varsToSend = uploadVars
+      .filter((v) => v.description.trim())
+      .map(v => ({description: v.description, allowedValues: v.allowedValues || []}));
+    if (varsToSend.length > 0) {
+      formData.append("variables", JSON.stringify(varsToSend));
     }
     const labels = Object.fromEntries(Object.entries(uploadLabels).filter(([, v]) => v.trim()));
     if (Object.keys(labels).length > 0) {
@@ -192,7 +224,20 @@ export default function ParametrageAttestations() {
     setEditingTemplate(t);
     setEditNom(t.nom);
     setEditDesc(t.description || "");
-    setEditVars(t.variables || []);
+    // Handle backward compatibility: if variables are strings, convert to objects
+    if (t.variables && t.variables.length > 0) {
+      const firstVar = t.variables[0];
+      // Type guard: check if first element is a string (old format)
+      if (typeof firstVar === "string") {
+        // Old format: string[] - cast to unknown first to satisfy TypeScript
+        setEditVars((t.variables as unknown as string[]).map((v) => ({description: v, allowedValues: []})));
+      } else {
+        // New format: Array<{description, allowedValues}>
+        setEditVars(t.variables as Array<{description: string; allowedValues?: string[]}>);
+      }
+    } else {
+      setEditVars([]);
+    }
     setEditNbUsagers(t.nb_usagers || 1);
     setEditLabels(t.usager_labels || {});
     setEditFile(null);
@@ -209,8 +254,9 @@ export default function ParametrageAttestations() {
     formData.append("nom", editNom);
     formData.append("description", editDesc);
     formData.append("nb_usagers", String(editNbUsagers));
-    const descs = editVars.filter((v) => v.trim());
-    formData.append("variables", JSON.stringify(descs));
+    // Send full variable objects with allowedValues
+    const varsToSend = editVars.map(v => ({description: v.description, allowedValues: v.allowedValues || []}));
+    formData.append("variables", JSON.stringify(varsToSend));
     const labels = Object.fromEntries(Object.entries(editLabels).filter(([, v]) => v.trim()));
     formData.append("usager_labels", JSON.stringify(labels));
     if (editFile) {
