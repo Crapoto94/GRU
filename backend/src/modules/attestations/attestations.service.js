@@ -45,14 +45,6 @@ function prepareUsagerData(usager) {
   };
 }
 
-function slugifyLabel(label) {
-  return label
-    .toLowerCase()
-    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_|_$/g, "");
-}
-
 const attestationService = {
   async listTemplates(params) {
     return attestationRepository.findAllTemplates(params);
@@ -88,7 +80,6 @@ const attestationService = {
     if (!template) throw Object.assign(new Error("Template non trouve"), { status: 404 });
 
     const nbUsagers = template.nb_usagers || 1;
-    const labels = template.usager_labels || {};
 
     let usager2 = null;
     if (nbUsagers >= 2 && usager2Id) {
@@ -121,9 +112,9 @@ const attestationService = {
     } else {
       mergeData = {};
       const usagers = [
-        { data: usager, key: slugifyLabel(labels["1"] || "usager1") },
-        ...(usager2 ? [{ data: usager2, key: slugifyLabel(labels["2"] || "usager2") }] : []),
-        ...(usager3 ? [{ data: usager3, key: slugifyLabel(labels["3"] || "usager3") }] : []),
+        { data: usager, key: "usager1" },
+        ...(usager2 ? [{ data: usager2, key: "usager2" }] : []),
+        ...(usager3 ? [{ data: usager3, key: "usager3" }] : []),
       ];
       for (const { data, key } of usagers) {
         for (const [field, val] of Object.entries(prepareUsagerData(data))) {

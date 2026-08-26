@@ -188,7 +188,7 @@ export default function AttestationGenerate() {
           {activeTemplate && (
             <p className="text-xs text-gray-400 mt-1">
               {nbUsagers > 1
-                ? `Ce template concerne ${nbUsagers} usagers. Les variables seront prefixees par le label de chaque usager.`
+                ? `Ce template concerne ${nbUsagers} usagers. Les variables sont prefixees par usager1_, usager2_, usager3_.`
                 : "Variables de l'usager accessibles directement ({{nom}}, {{prenom}}...)."}
             </p>
           )}

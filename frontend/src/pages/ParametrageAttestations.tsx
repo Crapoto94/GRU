@@ -293,11 +293,11 @@ export default function ParametrageAttestations() {
               <p className="font-medium text-ville-dark mb-1">5. Multi-usagers</p>
               <p className="text-gray-600 mb-1">
                 Pour les templates concernant plusieurs usagers (concubinage, etc.), selectionnez 2 ou 3 usagers.
-                Vous pouvez nommer chaque slot de variables (ex: "Demandeur", "Beneficiaire").
+                Vous pouvez nommer chaque slot (ex: "Demandeur", "Beneficiaire") a des fins d'affichage uniquement.
               </p>
               <p className="text-gray-600 text-xs">
-                Les variables seront prefixees par le label en minuscule : {`{{demandeur_nom}}`}, {`{{beneficiaire_prenom}}`}, etc.
-                Les variables sans prefixe (directes) sont disponibles pour les templates 1 usager.
+                Les variables sont toujours prefixees par usager1_, usager2_, usager3_ :
+                {` {{usager1_nom}}`}, {` {{usager2_prenom}}`}, etc.
               </p>
             </div>
             <div>
@@ -306,12 +306,12 @@ export default function ParametrageAttestations() {
                 className="flex items-center gap-1 text-ville-primary hover:text-blue-700 font-medium"
               >
                 {varsOuvert ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                Voir les variables disponibles avec prefixe
+                Voir les variables disponibles
               </button>
               {varsOuvert && (
                 <p className="text-xs text-gray-500 mt-1 ml-4">
-                  Pour un template 2 usagers avec label 1="Demandeur", label 2="Beneficiaire", les variables sont :
-                  {` {{demandeur_civilite}}`}, {` {{demandeur_nom}}`}, {` {{beneficiaire_civilite}}`}, etc.
+                  Pour un template 2 usagers, les variables sont :
+                  {` {{usager1_civilite}}`}, {` {{usager1_nom}}`}, {` {{usager2_civilite}}`}, {` {{usager2_nom}}`}, etc.
                 </p>
               )}
             </div>
@@ -362,7 +362,7 @@ export default function ParametrageAttestations() {
             )}
             <p className="text-xs text-gray-400 mt-1">
               {uploadNbUsagers > 1
-                ? "Les variables seront prefixees par le label de chaque usager en minuscule (ex: {{demandeur_nom}})."
+                ? "Les variables seront prefixees par usager1_, usager2_, usager3_ (ex: {{usager1_nom}}, {{usager2_nom}})."
                 : "Les variables de l'usager sont accessibles directement (ex: {{nom}}, {{prenom}})."}
             </p>
           </div>
