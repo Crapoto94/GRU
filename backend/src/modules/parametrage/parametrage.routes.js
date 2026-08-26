@@ -303,7 +303,7 @@ router.post("/synbird/test", async (_req, res, next) => {
     const start = Date.now();
     try {
       const response = await axios.get(baseUrl, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        headers: token ? { token } : {},
         timeout: 5000,
         httpsAgent: new (require("https").Agent)({ rejectUnauthorized: false }),
         validateStatus: () => true,
@@ -331,4 +331,4 @@ router.post("/synbird/test", async (_req, res, next) => {
   }
 });
 
-
+module.exports = router;

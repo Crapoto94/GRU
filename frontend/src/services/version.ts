@@ -1,4 +1,4 @@
-export const VERSION = "0.2.1";
+export const VERSION = "0.2.2";
 
 export interface ChangelogEntry {
   version: string;
@@ -8,52 +8,64 @@ export interface ChangelogEntry {
 
 export const CHANGELOG = [
   {
+    version: "0.2.2",
+    date: "2026-08-26",
+    features: [
+      "Paramétrage de l'API Synbird (RDV) : URL, token et test de connexion",
+      "Correction de la casse des noms de fusion : NOM en majuscules, Prénom en casse titre, dans le titre des attestations et toutes les variables (y compris multi-usagers)",
+      "Correction de la variable `ne` : affichait « ne »/« nee » au lieu de « né »/« née »",
+      "Correction de l'affichage des attestations d'un usager en 2ᵉ ou 3ᵉ demandeur (co-titulaire) dans la modale de détail",
+      "Correction de la non-persistance des consentements RGPD : chaque changement de consentement est désormais enregistré dans l'historique",
+      "Correction d'une erreur de démarrage du serveur backend (fonction mal déclarée)"
+    ]
+  },
+  {
     version: "0.2.1",
     date: "2026-08-26",
     features: [
-      "Admin-only delete usagers/attestations/templates",
-      "Neutral title Mx (sexe=non-binaire, ne=empty)",
-      "Fix date_naissance timezone (no UTC shift)",
-      "Search users by phone/mobile added",
-      "Attestation count badge with modal and download",
-      "Template .docx download from parametrage",
-      "Fix address: avoid double number from API",
-      "Dynamic custom variables N (variable1, variable2...)",
-      "Multi-usagers 1-3 with UI labels only, fixed prefixes usager1/2/3",
-      "Sexe variable (M/F/non-binary) from civilite",
-      "Nom usage in parentheses if filled",
-      "Ne/nee/vide according to civilite",
-      "Template soft delete (actif=false) + file cleanup",
-      "Template edit: name, desc, variables, nb_usagers, labels, file",
-      "Address autocomplete (api-adresse.data.gouv.fr) + country (restcountries.com)",
-      "Long birth date format (15 mars 1985)",
-      "Attestation generation: template first, then user selection"
+      "Suppression usagers/attestations/templates réservée aux administrateurs (middleware requireRole)",
+      "Civilité neutre « Mx » ajoutée (sexe = non-binaire, ne = vide)",
+      "Correction fuseau horaire date_naissance (affichage jour exact sans décalage UTC)",
+      "Recherche usagers étendue au téléphone fixe et mobile",
+      "Pastille nombre d'attestations par usager avec modal de détail et téléchargement",
+      "Téléchargement du fichier .docx original d'un template depuis le paramétrage",
+      "Correction adresse : évite le double numéro si l'API le renvoie déjà dans le nom de rue",
+      "Variables custom dynamiques : ajout N variables avec description (variable1, variable2...)",
+      "Multi-usagers 1 à 3 avec labels personnalisés (affichage UI uniquement, préfixes fixes usager1/2/3_)",
+      "Variable `sexe` (masculin/féminin/non-binaire) selon civilité",
+      "Variable `nom_usage` entre parenthèses si renseigné",
+      "Variable `ne` / `née` / vide selon civilité",
+      "Suppression template : soft delete (actif=false) + nettoyage fichier physique",
+      "Édition template : modification nom, description, variables, nb_usagers, labels, fichier",
+      "Autocomplétion adresse (api-adresse.data.gouv.fr) + pays (restcountries.com)",
+      "Variable `date_naissance_long` (ex: 15 mars 1985)",
+      "Génération attestation : template d'abord, puis sélection usager(s)"
     ]
   },
   {
     version: "0.2.0",
     date: "2026-08-25",
     features: [
-      "Multi-usagers: templates 1 or 2 users with usager1_/usager2_ prefixes",
-      "System variables date_du_jour / date_du_jour_long always available",
-      "Fix adresse_complete: street only, no CP/ville/complement",
-      "Fix adresse_complete for PostgreSQL (Adresse -> adresse)"
+      "Multi-usagers : templates 1 ou 2 usagers avec préfixes usager1_/usager2_",
+      "Variables système date_du_jour / date_du_jour_long toujours disponibles",
+      "Correction variable `adresse_complete` (rue seule, sans CP/ville/complément)",
+      "Correction variable `adresse_complete` pour PostgreSQL (colonne Adresse → adresse)"
     ]
   },
   {
     version: "0.1.0",
     date: "2026-08-20",
     features: [
-      "User management: create, edit, archive, restore, delete",
-      "Search users by name, email",
-      "Duplicate check (name+dob, phone)",
-      "Birthplace and country autocomplete",
-      "Attestation templates: .docx upload, variables, PDF generation",
-      "User variables: civilite, nom, prenom, dob, address, etc.",
-      "Attestations list with filters, download, delete",
-      "JWT authentication + Active Directory",
-      "User/role management (user/admin)",
-      "Responsive Tailwind CSS interface"
+      "Gestion usagers : création, édition, archivage, restauration, suppression",
+      "Recherche usagers par nom, prénom, email",
+      "Vérification doublons (nom+date_naissance, téléphone)",
+      "Autocomplétion lieu de naissance et pays de naissance",
+      "Templates d'attestations : upload .docx, variables, génération PDF",
+      "Variables usager : civilité, nom, prénom, date_naissance, adresse, etc.",
+      "Liste attestations avec filtres, téléchargement, suppression",
+      "Authentification JWT + Active Directory",
+      "Gestion utilisateurs et rôles (utilisateur/administrateur)",
+      "Interface responsive avec Tailwind CSS"
     ]
   }
 ];

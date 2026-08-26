@@ -62,16 +62,22 @@ const attestationRepository = {
     }
     if (usager_id) {
       params.push(usager_id);
-      query += ` AND a.usager_id = $${params.length}`;
+      query += ` AND (a.usager_id = $${params.length} OR a.usager2_id = $${params.length} OR a.usager3_id = $${params.length})`;
     }
     query += ` ORDER BY a.created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
     params.push(limit, offset);
     const rows = await db.all(query, params);
-    const countResult = await db.get(
-      `SELECT COUNT(*) as total FROM ${TABLE_ATTESTATIONS} WHERE 1=1` +
-        (statut ? ` AND statut = '${statut}'` : "") +
-        (usager_id ? ` AND usager_id = '${usager_id}'` : "")
-    );
+    const countParams = [];
+    let countQuery = `SELECT COUNT(*) as total FROM ${TABLE_ATTESTATIONS} a WHERE 1=1`;
+    if (statut) {
+      countParams.push(statut);
+      countQuery += ` AND a.statut = $${countParams.length}`;
+    }
+    if (usager_id) {
+      countParams.push(usager_id);
+      countQuery += ` AND (a.usager_id = $${countParams.length} OR a.usager2_id = $${countParams.length} OR a.usager3_id = $${countParams.length})`;
+    }
+    const countResult = await db.get(countQuery, countParams);
     return { rows, total: parseInt(countResult.total, 10) };
   },
 

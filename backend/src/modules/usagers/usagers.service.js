@@ -20,18 +20,24 @@ const usagerService = {
       throw err;
     }
     const usager = await usagerRepository.create({ ...data, created_by: user });
+    if (data.consentement_rgpd !== undefined) {
+      await usagerRepository.logConsentement(usager.id, data.consentement_rgpd, ip);
+    }
     await logAcces(user, "CREATE", "usagers", usager.id, { nom: usager.nom, prenom: usager.prenom }, ip);
     return usager;
   },
 
   async update(id, data, user, ip) {
-    await this.getById(id);
+    const existing = await this.getById(id);
     const validation = validateUsager(data);
     if (!validation.valid) {
       const err = Object.assign(new Error(validation.errors.join(", ")), { status: 400 });
       throw err;
     }
     const updated = await usagerRepository.update(id, data);
+    if (data.consentement_rgpd !== undefined && data.consentement_rgpd !== existing.consentement_rgpd) {
+      await usagerRepository.logConsentement(id, data.consentement_rgpd, ip);
+    }
     await logAcces(user, "UPDATE", "usagers", id, data, ip);
     return updated;
   },

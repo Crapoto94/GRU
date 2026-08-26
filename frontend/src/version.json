@@ -1,6 +1,18 @@
 {
-  "version": "0.2.1",
+  "version": "0.2.2",
   "changelog": [
+    {
+      "version": "0.2.2",
+      "date": "2026-08-26",
+      "features": [
+        "Paramétrage de l'API Synbird (RDV) : URL, token et test de connexion",
+        "Correction de la casse des noms de fusion : NOM en majuscules, Prénom en casse titre, dans le titre des attestations et toutes les variables (y compris multi-usagers)",
+        "Correction de la variable `ne` : affichait « ne »/« nee » au lieu de « né »/« née »",
+        "Correction de l'affichage des attestations d'un usager en 2ᵉ ou 3ᵉ demandeur (co-titulaire) dans la modale de détail",
+        "Correction de la non-persistance des consentements RGPD : chaque changement de consentement est désormais enregistré dans l'historique",
+        "Correction d'une erreur de démarrage du serveur backend (fonction mal déclarée)"
+      ]
+    },
     {
       "version": "0.2.1",
       "date": "2026-08-26",

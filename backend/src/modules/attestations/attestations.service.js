@@ -10,16 +10,33 @@ const { logAcces } = require("../../utils/logger");
 const TEMPLATES_DIR = path.resolve(__dirname, "../../../templates");
 const UPLOADS_DIR = path.resolve(__dirname, "../../../uploads/documents");
 
+function formatPrenom(name) {
+  if (!name) return "";
+  return name
+    .split(/\s+/)
+    .map((part) =>
+      part
+        .split("-")
+        .map((sub) => sub.charAt(0).toUpperCase() + sub.slice(1).toLowerCase())
+        .join("-")
+    )
+    .join(" ");
+}
+
+function formatNom(name) {
+  return (name || "").toUpperCase();
+}
+
 function prepareUsagerData(usager) {
   const isMale = usager.civilite === "M.";
   const isNeutral = usager.civilite === "Mx";
   return {
     civilite: usager.civilite || "",
-    nom: usager.nom || "",
-    prenom: usager.prenom || "",
-    nom_complet: `${usager.civilite || ""} ${usager.prenom || ""} ${usager.nom || ""}`.trim(),
-    nom_usage: usager.nom_usage ? `(${usager.nom_usage})` : "",
-    ne: isMale ? "ne" : isNeutral ? "" : "nee",
+    nom: formatNom(usager.nom) || "",
+    prenom: formatPrenom(usager.prenom) || "",
+    nom_complet: `${usager.civilite || ""} ${formatPrenom(usager.prenom)} ${formatNom(usager.nom)}`.trim(),
+    nom_usage: usager.nom_usage ? `(${formatNom(usager.nom_usage)})` : "",
+    ne: isMale ? "né" : isNeutral ? "" : "née",
     sexe: isMale ? "masculin" : isNeutral ? "non-binaire" : "féminin",
     date_naissance: usager.date_naissance
       ? new Date(usager.date_naissance).toLocaleDateString("fr-FR")
@@ -141,9 +158,9 @@ const attestationService = {
     fs.mkdirSync(UPLOADS_DIR, { recursive: true });
     fs.writeFileSync(filePath, outputDocx);
 
-    const nameParts = [`${usager.prenom} ${usager.nom}`];
-    if (usager2) nameParts.push(`${usager2.prenom} ${usager2.nom}`);
-    if (usager3) nameParts.push(`${usager3.prenom} ${usager3.nom}`);
+    const nameParts = [`${formatPrenom(usager.prenom)} ${formatNom(usager.nom)}`];
+    if (usager2) nameParts.push(`${formatPrenom(usager2.prenom)} ${formatNom(usager2.nom)}`);
+    if (usager3) nameParts.push(`${formatPrenom(usager3.prenom)} ${formatNom(usager3.nom)}`);
     const titreSuffixe = nameParts.join(" & ");
 
     const attestation = await attestationRepository.create({

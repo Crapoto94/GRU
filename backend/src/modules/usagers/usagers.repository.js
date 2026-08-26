@@ -2,7 +2,31 @@ const { db, SCHEMA_NAME } = require("../../config/pg_db");
 
 const TABLE = `"${SCHEMA_NAME}".usagers`;
 
+function formatName(name) {
+  if (!name) return "";
+  // Preserve hyphens and spaces, capitalize each part
+  return name
+    .split(/\s+/)
+    .map((part) =>
+      part
+        .split("-")
+        .map((sub) => sub.charAt(0).toUpperCase() + sub.slice(1).toLowerCase())
+        .join("-")
+    )
+    .join(" ");
+}
+
+const CONSENTEMENTS_RGPD = `"${SCHEMA_NAME}".consentements_rgpd`;
+
 const usagerRepository = {
+  async logConsentement(usagerId, consentement, ip) {
+    return db.run(
+      `INSERT INTO ${CONSENTEMENTS_RGPD} (usager_id, type_consentement, consentement, ip_address)
+       VALUES ($1, $2, $3, $4)`,
+      [usagerId, "traitement_donnees_personnelles", consentement === true, ip || null]
+    );
+  },
+
   async findAll({ archived = false, search = "", limit = 50, offset = 0 } = {}) {
     const ATTESTATIONS = `"${SCHEMA_NAME}".attestations`;
     let query = `SELECT u.*, u.adresse as "Adresse",
@@ -42,7 +66,7 @@ const usagerRepository = {
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
        RETURNING *`,
       [
-        data.civilite || "M.", data.nom, data.prenom, data.nom_usage || null,
+        data.civilite || "M.", formatName(data.nom), formatName(data.prenom), data.nom_usage ? formatName(data.nom_usage) : null,
         data.date_naissance, data.lieu_naissance || null, data.pays_naissance || "France",
         data.nationalite || "Francaise", data.situation_familiale || null,
         data.email || null, data.telephone || null, data.mobile || null,
@@ -66,14 +90,22 @@ const usagerRepository = {
     const allowed = [
       "civilite", "nom", "prenom", "nom_usage", "date_naissance", "lieu_naissance",
       "pays_naissance", "nationalite", "situation_familiale", "email", "telephone", "mobile",
-      "adresse", "complement_adresse", "code_postal", "ville", "pays", "mail_actif",
+      "adresse", "complement_adresse", "code_postal", "ville", "pays",
+      "mail_actif", "consentement_rgpd",
     ];
     for (const key of allowed) {
       if (data[key] !== undefined) {
         fields.push(`"${key}" = $${idx}`);
+        if (key === "nom" || key === "prenom" || key === "nom_usage") {
+        params.push(formatName(data[key]));
+      } else {
         params.push(data[key]);
+      }
         idx++;
       }
+    }
+    if (data.consentement_rgpd === true) {
+      fields.push(`"date_consentement" = NOW()`);
     }
     fields.push(`"updated_at" = NOW()`);
     params.push(id);
