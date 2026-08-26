@@ -1,0 +1,122 @@
+const { db, SCHEMA_NAME } = require("../../config/pg_db");
+
+const TABLE = `"${SCHEMA_NAME}".usagers`;
+
+const usagerRepository = {
+  async findAll({ archived = false, search = "", limit = 50, offset = 0 } = {}) {
+    let query = `SELECT * FROM ${TABLE} WHERE archived = $1`;
+    const params = [archived];
+    if (search) {
+      params.push(`%${search}%`);
+      params.push(`%${search}%`);
+      params.push(`%${search}%`);
+      query += ` AND (nom ILIKE $${params.length - 2} OR prenom ILIKE $${params.length - 1} OR email ILIKE $${params.length})`;
+    }
+    query += ` ORDER BY created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+    params.push(limit, offset);
+    const rows = await db.all(query, params);
+    const countResult = await db.get(
+      `SELECT COUNT(*) as total FROM ${TABLE} WHERE archived = $1`,
+      [archived]
+    );
+    return { rows, total: parseInt(countResult.total, 10) };
+  },
+
+  async findById(id) {
+    return db.get(`SELECT * FROM ${TABLE} WHERE id = $1`, [id]);
+  },
+
+  async create(data) {
+    const result = await db.run(
+      `INSERT INTO ${TABLE} (civilite, nom, prenom, nom_usage, date_naissance, lieu_naissance,
+        pays_naissance, nationalite, situation_familiale, email, telephone, mobile,
+        Adresse, complement_adresse, code_postal, ville, pays,
+        mail_actif, consentement_rgpd, date_consentement, created_by)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
+       RETURNING *`,
+      [
+        data.civilite || "M.", data.nom, data.prenom, data.nom_usage || null,
+        data.date_naissance, data.lieu_naissance || null, data.pays_naissance || "France",
+        data.nationalite || "Francaise", data.situation_familiale || null,
+        data.email || null, data.telephone || null, data.mobile || null,
+        data.Adresse || null, data.complement_adresse || null, data.code_postal || null,
+        data.ville || null, data.pays || "France",
+        data.mail_actif !== false, data.consentement_rgpd === true,
+        data.consentement_rgpd ? new Date().toISOString() : null,
+        data.created_by || null,
+      ]
+    );
+    return result.rows ? result.rows[0] : result;
+  },
+
+  async update(id, data) {
+    const fields = [];
+    const params = [];
+    let idx = 1;
+    const allowed = [
+      "civilite", "nom", "prenom", "nom_usage", "date_naissance", "lieu_naissance",
+      "pays_naissance", "nationalite", "situation_familiale", "email", "telephone", "mobile",
+      "Adresse", "complement_adresse", "code_postal", "ville", "pays", "mail_actif",
+    ];
+    for (const key of allowed) {
+      if (data[key] !== undefined) {
+        fields.push(`"${key}" = $${idx}`);
+        params.push(data[key]);
+        idx++;
+      }
+    }
+    fields.push(`"updated_at" = NOW()`);
+    params.push(id);
+    const result = await db.run(
+      `UPDATE ${TABLE} SET ${fields.join(", ")} WHERE id = $${idx} RETURNING *`,
+      params
+    );
+    return result.rows ? result.rows[0] : result;
+  },
+
+  async archive(id, motif) {
+    const result = await db.run(
+      `UPDATE ${TABLE} SET archived = true, date_archivage = NOW(), motif_archivage = $1, updated_at = NOW()
+       WHERE id = $2 RETURNING *`,
+      [motif || null, id]
+    );
+    return result.rows ? result.rows[0] : result;
+  },
+
+  async restore(id) {
+    const result = await db.run(
+      `UPDATE ${TABLE} SET archived = false, date_archivage = NULL, motif_archivage = NULL, updated_at = NOW()
+       WHERE id = $2 RETURNING *`,
+      [null, id]
+    );
+    return result.rows ? result.rows[0] : result;
+  },
+
+  async remove(id) {
+    return db.run(`DELETE FROM ${TABLE} WHERE id = $1`, [id]);
+  },
+
+  async count() {
+    const result = await db.get(`SELECT COUNT(*) as total FROM ${TABLE} WHERE archived = false`);
+    return parseInt(result.total, 10);
+  },
+
+  async checkDoublons({ nom, date_naissance, telephone, exclude_id }) {
+    const results = { nom_date: [], telephone: [] };
+    if (nom && date_naissance) {
+      let q = `SELECT id, civilite, nom, prenom, date_naissance, email, telephone, ville FROM ${TABLE} WHERE archived = false AND LOWER(nom) = LOWER($1) AND date_naissance = $2`;
+      const params = [nom.trim(), date_naissance];
+      if (exclude_id) { q += ` AND id != $${params.length + 1}`; params.push(exclude_id); }
+      results.nom_date = await db.all(q, params);
+    }
+    if (telephone) {
+      let q = `SELECT id, civilite, nom, prenom, date_naissance, email, telephone, ville FROM ${TABLE} WHERE archived = false AND (telephone = $1 OR mobile = $1)`;
+      const params = [telephone.trim()];
+      if (exclude_id) { q += ` AND id != $${params.length + 1}`; params.push(exclude_id); }
+      results.telephone = await db.all(q, params);
+    }
+    return results;
+  },
+};
+
+module.exports = usagerRepository;
