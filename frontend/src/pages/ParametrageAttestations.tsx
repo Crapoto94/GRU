@@ -19,7 +19,7 @@ const VARIABLES_USAGER = [
   { nom: "email", description: "Adresse email de l'usager", exemple: "jean.dupont@email.fr" },
   { nom: "telephone", description: "Numero de telephone fixe", exemple: "01 45 67 89 01" },
   { nom: "mobile", description: "Numero de telephone mobile", exemple: "06 12 34 56 78" },
-  { nom: "adresse_complete", description: "Adresse complete (numero + type + voie + complement, genere automatiquement)", exemple: "10 Rue de Paris Bat B" },
+  { nom: "adresse_complete", description: "Champ adresse (sans complement, CP ni ville)", exemple: "10 Rue de Paris" },
   { nom: "complement_adresse", description: "Complement d'adresse (batterie, etage...)", exemple: "Batiment B, 3eme etage" },
   { nom: "code_postal", description: "Code postal", exemple: "94200" },
   { nom: "ville", description: "Ville", exemple: "Ivry-sur-Seine" },
