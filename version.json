@@ -1,0 +1,54 @@
+{
+  "version": "0.2.1",
+  "changelog": [
+    {
+      "version": "0.2.1",
+      "date": "2026-08-26",
+      "features": [
+        "Suppression usagers/attestations/templates réservée aux administrateurs (middleware requireRole)",
+        "Civilité neutre « Mx » ajoutée (sexe = non-binaire, ne = vide)",
+        "Correction fuseau horaire date_naissance (affichage jour exact sans décalage UTC)",
+        "Recherche usagers étendue au téléphone fixe et mobile",
+        "Pastille nombre d'attestations par usager avec modal de détail et téléchargement",
+        "Téléchargement du fichier .docx original d'un template depuis le paramétrage",
+        "Correction adresse : évite le double numéro si l'API le renvoie déjà dans le nom de rue",
+        "Variables custom dynamiques : ajout N variables avec description (variable1, variable2...)",
+        "Multi-usagers 1 à 3 avec labels personnalisés (affichage UI uniquement, préfixes fixes usager1/2/3_)",
+        "Variable `sexe` (masculin/féminin/non-binaire) selon civilité",
+        "Variable `nom_usage` entre parenthèses si renseigné",
+        "Variable `ne` / `née` / vide selon civilité",
+        "Suppression template : soft delete (actif=false) + nettoyage fichier physique",
+        "Édition template : modification nom, description, variables, nb_usagers, labels, fichier",
+        "Autocomplétion adresse (api-adresse.data.gouv.fr) + pays (restcountries.com)",
+        "Variable `date_naissance_long` (ex: 15 mars 1985)",
+        "Génération attestation : template d'abord, puis sélection usager(s)"
+      ]
+    },
+    {
+      "version": "0.2.0",
+      "date": "2026-08-25",
+      "features": [
+        "Multi-usagers : templates 1 ou 2 usagers avec préfixes usager1_/usager2_",
+        "Variables système date_du_jour / date_du_jour_long toujours disponibles",
+        "Correction variable `adresse_complete` (rue seule, sans CP/ville/complément)",
+        "Correction variable `adresse_complete` pour PostgreSQL (colonne Adresse → adresse)"
+      ]
+    },
+    {
+      "version": "0.1.0",
+      "date": "2026-08-20",
+      "features": [
+        "Gestion usagers : création, édition, archivage, restauration, suppression",
+        "Recherche usagers par nom, prénom, email",
+        "Vérification doublons (nom+date_naissance, téléphone)",
+        "Autocomplétion lieu de naissance et pays de naissance",
+        "Templates d'attestations : upload .docx, variables, génération PDF",
+        "Variables usager : civilité, nom, prénom, date_naissance, adresse, etc.",
+        "Liste attestations avec filtres, téléchargement, suppression",
+        "Authentification JWT + Active Directory",
+        "Gestion utilisateurs et rôles (utilisateur/administrateur)",
+        "Interface responsive avec Tailwind CSS"
+      ]
+    }
+  ]
+}

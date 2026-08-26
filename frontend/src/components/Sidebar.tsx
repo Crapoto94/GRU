@@ -1,7 +1,8 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { Users, FileText, Layout, Settings, LogOut, Database, Shield, Globe, ScrollText } from "lucide-react";
+import { Users, FileText, Layout, Settings, LogOut, Database, Shield, Globe, ScrollText, Info } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
+import { getVersion, formatVersion } from "../services/version";
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
   `flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
@@ -98,6 +99,12 @@ export default function Sidebar() {
         <div className="px-4 mb-2">
           <p className="text-sm font-medium text-gray-800">{user?.prenom} {user?.nom}</p>
           <p className="text-xs text-gray-500">{user?.role === "administrateur" ? "Administrateur" : "Utilisateur"}</p>
+        </div>
+        <div className="flex items-center justify-between px-4 mb-2 text-xs text-gray-400">
+          <span>Version {formatVersion(getVersion())}</span>
+          <button className="flex items-center gap-1 hover:text-ville-primary transition" onClick={() => window.dispatchEvent(new CustomEvent("open-whats-new"))}>
+            <Info size={12} /> Nouveautes
+          </button>
         </div>
         <button
           onClick={handleLogout}

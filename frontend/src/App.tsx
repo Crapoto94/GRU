@@ -1,6 +1,8 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./contexts/AuthContext";
+import { useState, useEffect } from "react";
 import Sidebar from "./components/Sidebar";
+import WhatsNewModal from "./components/WhatsNewModal";
 import LoginPage from "./pages/LoginPage";
 import Dashboard from "./pages/Dashboard";
 import UsagersList from "./pages/UsagersList";
@@ -20,6 +22,14 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  const [showWhatsNew, setShowWhatsNew] = useState(false);
+
+  useEffect(() => {
+    const handler = () => setShowWhatsNew(true);
+    window.addEventListener("open-whats-new", handler);
+    return () => window.removeEventListener("open-whats-new", handler);
+  }, []);
+
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
@@ -46,6 +56,7 @@ export default function App() {
                 </Routes>
               </main>
             </div>
+            <WhatsNewModal isOpen={showWhatsNew} onClose={() => setShowWhatsNew(false)} />
           </ProtectedRoute>
         }
       />
