@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, FileText } from "lucide-react";
 import toast from "react-hot-toast";
+import { formatNom, formatPrenom } from "../utils/format";
 import { attestationsApi, usagersApi } from "../services/api";
 import type { Usager, Template } from "../types";
 
@@ -113,7 +114,7 @@ export default function AttestationGenerate() {
                   }`}
                 >
                   <div>
-                    <span className="font-medium">{u.prenom} {u.nom}</span>
+                    <span className="font-medium">{formatPrenom(u.prenom)} {formatNom(u.nom)}</span>
                     {u.ville && <span className="text-gray-500 ml-2">- {u.ville}</span>}
                   </div>
                   {selectedUsager === u.id && <FileText size={16} className="text-ville-primary" />}
@@ -123,7 +124,7 @@ export default function AttestationGenerate() {
           </div>
           {selectedUsagerData && (
             <div className="mt-3 p-3 bg-ville-light rounded-lg text-sm">
-              <p className="font-medium">{selectedUsagerData.civilite} {selectedUsagerData.prenom} {selectedUsagerData.nom}</p>
+              <p className="font-medium">{selectedUsagerData.civilite} {formatPrenom(selectedUsagerData.prenom)} {formatNom(selectedUsagerData.nom)}</p>
               <p className="text-gray-600">
                 {selectedUsagerData.Adresse || ""}
                 {selectedUsagerData.code_postal && selectedUsagerData.ville && `, ${selectedUsagerData.code_postal} ${selectedUsagerData.ville}`}

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Edit, FileText, Archive, RotateCcw } from "lucide-react";
 import toast from "react-hot-toast";
+import { formatNom, formatPrenom } from "../utils/format";
 import { usagersApi, attestationsApi } from "../services/api";
 import type { Usager, Attestation } from "../types";
 
@@ -61,7 +62,7 @@ export default function UsagerDetail() {
           </button>
           <div>
             <h1 className="text-2xl font-bold text-ville-dark">
-              {usager.civilite} {usager.prenom} {usager.nom}
+              {usager.civilite} {formatPrenom(usager.prenom)} {formatNom(usager.nom)}
             </h1>
             {usager.archived && (
               <span className="text-sm text-orange-600 font-medium">Archive</span>
@@ -100,8 +101,8 @@ export default function UsagerDetail() {
         <section>
           <h2 className="text-lg font-semibold text-ville-primary mb-3">Etat civil</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-            <div><span className="text-gray-500">Nom</span><p className="font-medium">{usager.nom}</p></div>
-            <div><span className="text-gray-500">Prenom</span><p className="font-medium">{usager.prenom}</p></div>
+            <div><span className="text-gray-500">Nom</span><p className="font-medium">{formatNom(usager.nom)}</p></div>
+            <div><span className="text-gray-500">Prenom</span><p className="font-medium">{formatPrenom(usager.prenom)}</p></div>
             {usager.nom_usage && <div><span className="text-gray-500">Nom d'usage</span><p className="font-medium">{usager.nom_usage}</p></div>}
             <div><span className="text-gray-500">Date de naissance</span><p className="font-medium">{usager.date_naissance ? new Date(usager.date_naissance).toLocaleDateString("fr-FR") : "-"}</p></div>
             <div><span className="text-gray-500">Lieu de naissance</span><p className="font-medium">{usager.lieu_naissance || "-"}</p></div>

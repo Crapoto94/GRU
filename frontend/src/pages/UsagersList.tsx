@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Search, Plus, Archive, RotateCcw, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import toast from "react-hot-toast";
+import { formatNom, formatPrenom } from "../utils/format";
 import { usagersApi } from "../services/api";
 import type { Usager } from "../types";
 
@@ -129,8 +130,8 @@ export default function UsagersList() {
                   className="hover:bg-gray-50 cursor-pointer"
                   onClick={() => navigate(`/usagers/${u.id}`)}
                 >
-                  <td className="px-6 py-4 text-sm font-medium">{u.nom}</td>
-                  <td className="px-6 py-4 text-sm">{u.prenom}</td>
+                  <td className="px-6 py-4 text-sm font-medium">{formatNom(u.nom)}</td>
+                  <td className="px-6 py-4 text-sm">{formatPrenom(u.prenom)}</td>
                   <td className="px-6 py-4 text-sm text-gray-600">{u.email || "-"}</td>
                   <td className="px-6 py-4 text-sm text-gray-600">{u.mobile || u.telephone || "-"}</td>
                   <td className="px-6 py-4 text-sm text-gray-600">{u.ville || "-"}</td>

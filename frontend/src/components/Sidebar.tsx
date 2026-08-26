@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { Users, FileText, Layout, Settings, LogOut, Database, Shield, Globe } from "lucide-react";
+import { Users, FileText, Layout, Settings, LogOut, Database, Shield, Globe, ScrollText } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -67,7 +67,7 @@ export default function Sidebar() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
           </button>
-          {settingsOpen && (
+          {settingsOpen && isAdmin && (
             <div className="mt-1 space-y-1">
               <NavLink to="/parametrage/attestations" className={subLinkClass}>
                 <FileText size={14} />
@@ -81,12 +81,14 @@ export default function Sidebar() {
                 <Globe size={14} />
                 API Ville
               </NavLink>
-              {isAdmin && (
-                <NavLink to="/parametrage/utilisateurs" className={subLinkClass}>
-                  <Shield size={14} />
-                  Comptes utilisateurs
-                </NavLink>
-              )}
+              <NavLink to="/parametrage/utilisateurs" className={subLinkClass}>
+                <Shield size={14} />
+                Comptes utilisateurs
+              </NavLink>
+              <NavLink to="/parametrage/logs" className={subLinkClass}>
+                <ScrollText size={14} />
+                Journal d'activite
+              </NavLink>
             </div>
           )}
         </div>

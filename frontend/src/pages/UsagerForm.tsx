@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Save, ArrowLeft, Search, AlertTriangle, CheckCircle } from "lucide-react";
 import toast from "react-hot-toast";
+import { formatNom, formatPrenom } from "../utils/format";
 import { usagersApi } from "../services/api";
 import type { Usager } from "../types";
 
@@ -261,7 +262,7 @@ export default function UsagerForm() {
                           className="w-full text-left px-4 py-3 text-sm flex items-center justify-between hover:bg-blue-50 transition"
                         >
                           <div>
-                            <span className="font-medium">{d.prenom} {d.nom}</span>
+                            <span className="font-medium">{formatPrenom(d.prenom)} {formatNom(d.nom)}</span>
                             <span className="text-gray-500 ml-2">ne le {new Date(d.date_naissance).toLocaleDateString("fr-FR")}</span>
                             {d.ville && <span className="text-gray-400 ml-2">({d.ville})</span>}
                           </div>
@@ -284,7 +285,7 @@ export default function UsagerForm() {
                           className="w-full text-left px-4 py-3 text-sm flex items-center justify-between hover:bg-blue-50 transition"
                         >
                           <div>
-                            <span className="font-medium">{d.prenom} {d.nom}</span>
+                            <span className="font-medium">{formatPrenom(d.prenom)} {formatNom(d.nom)}</span>
                             <span className="text-gray-500 ml-2">{d.telephone || d.mobile}</span>
                           </div>
                           <span className="text-xs text-ville-primary">Voir &rarr;</span>

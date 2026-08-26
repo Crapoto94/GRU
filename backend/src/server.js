@@ -15,6 +15,7 @@ const attestationRoutes = require("./modules/attestations/attestations.routes");
 const usersRoutes = require("./modules/users/users.routes");
 const parametrageRoutes = require("./modules/parametrage/parametrage.routes");
 const adRoutes = require("./modules/ad/ad.routes");
+const logsRoutes = require("./modules/logs/logs.routes");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -63,6 +64,7 @@ app.use("/api/v1/attestations", authenticateToken, attestationRoutes);
 app.use("/api/v1/users", authenticateToken, usersRoutes);
 app.use("/api/v1/parametrage", authenticateToken, parametrageRoutes);
 app.use("/api/v1/ad", authenticateToken, adRoutes);
+app.use("/api/v1/logs", authenticateToken, logsRoutes);
 
 app.use((err, _req, res, _next) => {
   console.error("[ERROR]", err.message);

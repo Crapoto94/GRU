@@ -12,6 +12,7 @@ import ParametrageAttestations from "./pages/ParametrageAttestations";
 import ParametrageDatabase from "./pages/ParametrageDatabase";
 import ParametrageApiVille from "./pages/ParametrageApiVille";
 import UsersPage from "./pages/UsersPage";
+import LogsPage from "./pages/LogsPage";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { token } = useAuth();
@@ -42,6 +43,7 @@ export default function App() {
                   <Route path="/parametrage/base-de-donnees" element={<ParametrageDatabase />} />
                   <Route path="/parametrage/api-ville" element={<ParametrageApiVille />} />
                   <Route path="/parametrage/utilisateurs" element={<UsersPage />} />
+                  <Route path="/parametrage/logs" element={<LogsPage />} />
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </main>

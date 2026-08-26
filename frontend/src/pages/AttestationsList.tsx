@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Download, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
+import { formatNom, formatPrenom } from "../utils/format";
 import { attestationsApi } from "../services/api";
 import type { Attestation } from "../types";
 
@@ -103,7 +104,7 @@ export default function AttestationsList() {
               attestations.map((a) => (
                 <tr key={a.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 text-sm font-medium">{a.titre}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{a.usager_prenom} {a.usager_nom}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600">{formatPrenom(a.usager_prenom)} {formatNom(a.usager_nom)}</td>
                   <td className="px-6 py-4 text-sm text-gray-600">{a.template_nom}</td>
                   <td className="px-6 py-4 text-sm">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
