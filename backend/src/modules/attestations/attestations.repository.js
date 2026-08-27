@@ -127,6 +127,25 @@ const attestationRepository = {
   async remove(id) {
     return db.run(`DELETE FROM ${TABLE_ATTESTATIONS} WHERE id = $1`, [id]);
   },
+
+  async findDatesByUsagerAndTemplate(usagerId, templateId) {
+    return db.all(
+      `SELECT date_generation FROM ${TABLE_ATTESTATIONS}
+       WHERE template_id = $1 AND (usager_id = $2 OR usager2_id = $2 OR usager3_id = $2)
+       ORDER BY date_generation ASC`,
+      [templateId, usagerId]
+    );
+  },
+
+  async findDatesByUsagerPairAndTemplate(usagerId, usager2Id, templateId) {
+    return db.all(
+      `SELECT date_generation FROM ${TABLE_ATTESTATIONS}
+       WHERE template_id = $1
+         AND ((usager_id = $2 AND usager2_id = $3) OR (usager_id = $3 AND usager2_id = $2))
+       ORDER BY date_generation ASC`,
+      [templateId, usagerId, usager2Id]
+    );
+  },
 };
 
 module.exports = attestationRepository;

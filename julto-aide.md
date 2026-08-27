@@ -181,6 +181,8 @@ Un bouton **Nouveautés** dans le menu latéral ouvre l'historique des versions 
 |---------------------|--------------------------------------|------------------|
 | `date_du_jour`      | Date du jour (format court)          | 25/08/2026       |
 | `date_du_jour_long` | Date du jour en toutes lettres       | 25 août 2026     |
+| `usager1_historique_dates_meme_type` | Dates (séparées par une virgule) des attestations du même type déjà délivrées à l'usager 1 | 12/01/2025, 03/06/2025 |
+| `historique_dates_usager1_usager2` | Dates (séparées par une virgule) des attestations du même type déjà délivrées au même couple usager 1 / usager 2 | 12/01/2025, 03/06/2025 |
 
 ### 7.3 Variables personnalisées
 Définies lors de la création du template. Accès direct via `{{variable1}}`, `{{variable2}}`, etc.

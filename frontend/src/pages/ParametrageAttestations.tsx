@@ -46,6 +46,8 @@ const VARIABLES_LOGEMENT = [
 const VARIABLES_SYSTEME = [
   { nom: "date_du_jour", description: "Date du jour au format francais court", exemple: "25/08/2026" },
   { nom: "date_du_jour_long", description: "Date du jour en toutes lettres", exemple: "25 aout 2026" },
+  { nom: "usager1_historique_dates_meme_type", description: "Dates (separees par une virgule) des attestations du meme type deja delivrees a l'usager 1", exemple: "12/01/2025, 03/06/2025" },
+  { nom: "historique_dates_usager1_usager2", description: "Dates (separees par une virgule) des attestations du meme type deja delivrees au meme couple usager 1 / usager 2", exemple: "12/01/2025, 03/06/2025" },
 ];
 
 const NB_USAGERS_OPTIONS = [1, 2, 3];

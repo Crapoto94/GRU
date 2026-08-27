@@ -171,6 +171,20 @@ const attestationService = {
       }
     }
 
+    const datesMemeType = await attestationRepository.findDatesByUsagerAndTemplate(usagerId, templateId);
+    mergeData.usager1_historique_dates_meme_type = datesMemeType
+      .map((row) => new Date(row.date_generation).toLocaleDateString("fr-FR"))
+      .join(", ");
+
+    if (usager2Id) {
+      const datesCouple = await attestationRepository.findDatesByUsagerPairAndTemplate(usagerId, usager2Id, templateId);
+      mergeData.historique_dates_usager1_usager2 = datesCouple
+        .map((row) => new Date(row.date_generation).toLocaleDateString("fr-FR"))
+        .join(", ");
+    } else {
+      mergeData.historique_dates_usager1_usager2 = "";
+    }
+
     mergeData.date_du_jour = new Date().toLocaleDateString("fr-FR");
     mergeData.date_du_jour_long = new Date().toLocaleDateString("fr-FR", {
       year: "numeric",
