@@ -34,7 +34,8 @@ const usagerRepository = {
       (SELECT COUNT(*)::int FROM ${ATTESTATIONS} a
        WHERE a.usager_id = u.id OR a.usager2_id = u.id OR a.usager3_id = u.id
       ) as attestation_count,
-      EXISTS(SELECT 1 FROM ${LOGEMENTS} l WHERE l.usager_id = u.id) as has_logement
+      EXISTS(SELECT 1 FROM ${LOGEMENTS} l WHERE l.usager_id = u.id AND l.type_logement = 'principal') as has_logement_principal,
+      EXISTS(SELECT 1 FROM ${LOGEMENTS} l WHERE l.usager_id = u.id AND l.type_logement = 'secondaire') as has_logement_secondaire
       FROM ${TABLE} u WHERE u.archived = $1`;
     const params = [archived];
     if (search) {

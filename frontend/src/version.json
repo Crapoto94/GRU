@@ -1,6 +1,19 @@
 {
-  "version": "0.3.1",
+  "version": "0.3.2",
   "changelog": [
+    {
+      "version": "0.3.2",
+      "date": "2026-08-27",
+      "features": [
+        "Logement principal et logement secondaire par usager, gérés via deux onglets, chacun avec sa propre adresse (pré-remplie par défaut avec l'adresse de l'usager, modifiable indépendamment)",
+        "Icône logement dans la liste des usagers : distingue un seul logement renseigné (maison) des deux logements renseignés (bâtiment)",
+        "Variables d'attestation logement1_ (principal) et logement2_ (secondaire), jamais préfixées par usager, toujours présentes (vides si non utilisées) pour éviter tout affichage « undefined »",
+        "Templates : cases à cocher « Logement principal » / « Logement secondaire » ; si les deux sont cochées, le logement concerné est demandé à la génération de l'attestation",
+        "Nouvelles variables d'historique : dates des attestations du même type déjà délivrées à l'usager 1, et dates des attestations déjà délivrées au même couple usager 1 / usager 2",
+        "Listes déroulantes des variables personnalisées à la génération : plus de sélection automatique de la première valeur, vide par défaut",
+        "Documentation des variables mise à jour (aide intégrée + paramétrage des templates d'attestations)"
+      ]
+    },
     {
       "version": "0.3.1",
       "date": "2026-08-27",

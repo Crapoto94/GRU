@@ -24,7 +24,8 @@ export interface Usager {
   motif_archivage: string | null;
   created_by: string | null;
   attestation_count: number;
-  has_logement: boolean;
+  has_logement_principal: boolean;
+  has_logement_secondaire: boolean;
   created_at: string;
   updated_at: string;
 }

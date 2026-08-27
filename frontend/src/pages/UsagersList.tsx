@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Search, Plus, Archive, RotateCcw, Trash2, ChevronLeft, ChevronRight, FileText, X, Download, UserSearch, Home } from "lucide-react";
+import { Search, Plus, Archive, RotateCcw, Trash2, ChevronLeft, ChevronRight, FileText, X, Download, UserSearch, Home, Building2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { formatNom, formatPrenom } from "../utils/format";
 import { usagersApi, attestationsApi } from "../services/api";
@@ -255,12 +255,20 @@ export default function UsagersList() {
                   <td className="px-6 py-4 text-sm text-center" onClick={(e) => e.stopPropagation()}>
                     <button
                       onClick={() => setLogementModalUsager(u)}
-                      title={u.has_logement ? "Logement renseigne" : "Renseigner le logement"}
+                      title={
+                        u.has_logement_principal && u.has_logement_secondaire
+                          ? "Logements principal et secondaire renseignes"
+                          : u.has_logement_principal || u.has_logement_secondaire
+                          ? "Logement renseigne"
+                          : "Renseigner le logement"
+                      }
                       className={`inline-flex items-center justify-center w-7 h-7 rounded-full transition ${
-                        u.has_logement ? "bg-ville-primary/10 text-ville-primary hover:bg-ville-primary/20" : "text-gray-300 hover:bg-gray-100 hover:text-gray-400"
+                        u.has_logement_principal || u.has_logement_secondaire
+                          ? "bg-ville-primary/10 text-ville-primary hover:bg-ville-primary/20"
+                          : "text-gray-300 hover:bg-gray-100 hover:text-gray-400"
                       }`}
                     >
-                      <Home size={14} />
+                      {u.has_logement_principal && u.has_logement_secondaire ? <Building2 size={14} /> : <Home size={14} />}
                     </button>
                   </td>
                   <td className="px-6 py-4 text-sm">

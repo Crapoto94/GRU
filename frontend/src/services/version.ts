@@ -1,4 +1,4 @@
-export const VERSION = "0.3.1";
+export const VERSION = "0.3.2";
 
 export interface ChangelogEntry {
   version: string;
@@ -7,6 +7,19 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG = [
+  {
+    version: "0.3.2",
+    date: "2026-08-27",
+    features: [
+      "Logement principal et logement secondaire par usager, geres via deux onglets, chacun avec sa propre adresse (pre-remplie par defaut avec l'adresse de l'usager, modifiable independamment)",
+      "Icone logement dans la liste des usagers : distingue un seul logement renseigne (maison) des deux logements renseignes (batiment)",
+      "Variables d'attestation logement1_ (principal) et logement2_ (secondaire), jamais prefixees par usager, toujours presentes (vides si non utilisees) pour eviter tout affichage \"undefined\"",
+      "Templates : cases a cocher \"Logement principal\" / \"Logement secondaire\" ; si les deux sont cochees, le logement concerne est demande a la generation de l'attestation",
+      "Nouvelles variables d'historique : dates des attestations du meme type deja delivrees a l'usager 1, et dates des attestations deja delivrees au meme couple usager 1 / usager 2",
+      "Listes deroulantes des variables personnalisees a la generation : plus de selection automatique de la premiere valeur, vide par defaut",
+      "Documentation des variables mise a jour (aide integree + parametrage des templates d'attestations)",
+    ],
+  },
   {
     version: "0.3.1",
     date: "2026-08-27",
