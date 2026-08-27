@@ -90,9 +90,9 @@ export default function Sidebar() {
                 <Calendar size={14} />
                 API Synbird (RDV)
               </NavLink>
-              <NavLink to="/parametrage/messages-dossiers" className={subLinkClass}>
+              <NavLink to="/parametrage/messages" className={subLinkClass}>
                 <MessageSquare size={14} />
-                Messages CNI / Passeport
+                Messages
               </NavLink>
               <NavLink to="/parametrage/utilisateurs" className={subLinkClass}>
                 <Shield size={14} />

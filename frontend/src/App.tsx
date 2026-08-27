@@ -14,7 +14,7 @@ import ParametrageAttestations from "./pages/ParametrageAttestations";
 import ParametrageDatabase from "./pages/ParametrageDatabase";
 import ParametrageApiVille from "./pages/ParametrageApiVille";
 import ParametrageSynbird from "./pages/ParametrageSynbird";
-import ParametrageMessagesDossiers from "./pages/ParametrageMessagesDossiers";
+import ParametrageMessages from "./pages/ParametrageMessages";
 import DossiersList from "./pages/DossiersList";
 import DossierForm from "./pages/DossierForm";
 import DossierDetail from "./pages/DossierDetail";
@@ -66,7 +66,7 @@ export default function App() {
                   <Route path="/parametrage/base-de-donnees" element={<ParametrageDatabase />} />
                   <Route path="/parametrage/api-ville" element={<ParametrageApiVille />} />
                   <Route path="/parametrage/synbird" element={<ParametrageSynbird />} />
-                  <Route path="/parametrage/messages-dossiers" element={<ParametrageMessagesDossiers />} />
+                  <Route path="/parametrage/messages" element={<ParametrageMessages />} />
                   <Route path="/parametrage/utilisateurs" element={<UsersPage />} />
                   <Route path="/parametrage/logs" element={<LogsPage />} />
                   <Route path="*" element={<Navigate to="/" replace />} />

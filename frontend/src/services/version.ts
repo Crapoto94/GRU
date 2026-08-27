@@ -1,4 +1,4 @@
-export const VERSION = "0.2.2";
+export const VERSION = "0.3.0";
 
 export interface ChangelogEntry {
   version: string;
@@ -7,6 +7,21 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG = [
+  {
+    version: "0.3.0",
+    date: "2026-08-27",
+    features: [
+      "Nouveau module « Demandes CNI / Passeport » (menu dedie, independant des attestations)",
+      "Dossier multi-usagers et multi-pieces : statut independant par piece (demande/ajourne/arrive/recupere)",
+      "Destinataire de notification choisissable parmi tous les usagers du dossier (ex: parent notifie pour un enfant)",
+      "Suivi horodate par dossier : commentaires manuels + entrees automatiques a chaque changement de statut",
+      "Notification SMS/email a l'arrivee d'une piece via l'API Ville, toujours envoyee manuellement (jamais automatique)",
+      "Historique des notifications envoyees (succes/echec) consultable par piece",
+      "Import Synbird : detection des accompagnants mentionnes dans un RDV et proposition de creer leur fiche",
+      "Import Synbird : limite d'affichage a 5 resultats, au-dela un message invite a affiner la recherche",
+      "Paramétrage - Messages : modeles de SMS/email personnalisables par contexte, avec variables et apercu (renomme depuis « Messages CNI/Passeport », prevu pour accueillir d'autres types de messages)",
+    ],
+  },
   {
     version: "0.2.2",
     date: "2026-08-26",

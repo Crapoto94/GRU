@@ -1,6 +1,21 @@
 {
-  "version": "0.2.2",
+  "version": "0.3.0",
   "changelog": [
+    {
+      "version": "0.3.0",
+      "date": "2026-08-27",
+      "features": [
+        "Nouveau module « Demandes CNI / Passeport » (menu dédié, indépendant des attestations)",
+        "Dossier multi-usagers et multi-pièces : statut indépendant par pièce (demandé/ajourné/arrivé/récupéré)",
+        "Destinataire de notification choisissable parmi tous les usagers du dossier (ex: parent notifié pour un enfant)",
+        "Suivi horodaté par dossier : commentaires manuels + entrées automatiques à chaque changement de statut",
+        "Notification SMS/email à l'arrivée d'une pièce via l'API Ville, toujours envoyée manuellement (jamais automatique)",
+        "Historique des notifications envoyées (succès/échec) consultable par pièce",
+        "Import Synbird : détection des accompagnants mentionnés dans un RDV et proposition de créer leur fiche",
+        "Import Synbird : limite d'affichage à 5 résultats, au-delà un message invite à affiner la recherche",
+        "Paramétrage - Messages : modèles de SMS/email personnalisables par contexte, avec variables et aperçu (renommé depuis « Messages CNI/Passeport », prévu pour accueillir d'autres types de messages)"
+      ]
+    },
     {
       "version": "0.2.2",
       "date": "2026-08-26",
