@@ -66,3 +66,60 @@ export interface PaginatedResponse<T> {
   rows: T[];
   total: number;
 }
+
+export type TypePiece = "CNI" | "Passeport";
+export type StatutPiece = "demande" | "ajourne" | "arrive" | "recupere";
+export type CanalNotification = "sms" | "email" | "both";
+
+export interface DossierPiece {
+  id: string;
+  dossier_id: string;
+  usager_id: string;
+  usager_nom: string;
+  usager_prenom: string;
+  type_piece: TypePiece;
+  date_demande: string;
+  statut: StatutPiece;
+  destinataire_usager_id: string | null;
+  destinataire_nom: string | null;
+  destinataire_prenom: string | null;
+  destinataire_email: string | null;
+  destinataire_mobile: string | null;
+  destinataire_telephone: string | null;
+  canal_notification: CanalNotification;
+  date_arrivee: string | null;
+  date_recuperation: string | null;
+  notifie: boolean;
+  date_notification: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DossierSuivi {
+  id: string;
+  dossier_id: string;
+  agent: string;
+  commentaire: string;
+  automatique: boolean;
+  created_at: string;
+}
+
+export interface DossierNotificationLog {
+  id: string;
+  dossier_piece_id: string;
+  canal: "sms" | "email";
+  destinataire: string;
+  statut: "envoye" | "echec";
+  erreur: string | null;
+  envoye_par: string;
+  created_at: string;
+}
+
+export interface Dossier {
+  id: string;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  pieces: DossierPiece[];
+  suivi: DossierSuivi[];
+}

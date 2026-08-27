@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { Users, FileText, Layout, Settings, LogOut, Database, Shield, Globe, ScrollText, Info, HelpCircle, Calendar } from "lucide-react";
+import { Users, FileText, Layout, Settings, LogOut, Database, Shield, Globe, ScrollText, Info, HelpCircle, Calendar, IdCard, MessageSquare } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { getVersion, formatVersion } from "../services/version";
@@ -47,6 +47,10 @@ export default function Sidebar() {
           <FileText size={18} />
           Attestations
         </NavLink>
+        <NavLink to="/dossiers" className={linkClass}>
+          <IdCard size={18} />
+          Demandes CNI / Passeport
+        </NavLink>
 
         <div className="pt-2 mt-2 border-t border-gray-100">
           <button
@@ -85,6 +89,10 @@ export default function Sidebar() {
               <NavLink to="/parametrage/synbird" className={subLinkClass}>
                 <Calendar size={14} />
                 API Synbird (RDV)
+              </NavLink>
+              <NavLink to="/parametrage/messages-dossiers" className={subLinkClass}>
+                <MessageSquare size={14} />
+                Messages CNI / Passeport
               </NavLink>
               <NavLink to="/parametrage/utilisateurs" className={subLinkClass}>
                 <Shield size={14} />

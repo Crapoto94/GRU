@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { Usager, Template, Attestation, PaginatedResponse } from "../types";
+import type { Usager, Template, Attestation, PaginatedResponse, Dossier, DossierPiece, DossierSuivi, DossierNotificationLog } from "../types";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "",
@@ -79,6 +79,36 @@ export const usersApi = {
   remove: (id: string) => api.delete(`/api/v1/users/${id}`),
   resetPassword: (id: string, password: string) =>
     api.post(`/api/v1/users/${id}/reset-password`, { password }),
+};
+
+export const dossiersApi = {
+  list: (params?: { statut?: string; type_piece?: string; search?: string; limit?: number; offset?: number }) =>
+    api.get<PaginatedResponse<DossierPiece>>("/api/v1/dossiers", { params }),
+  getById: (id: string) => api.get<Dossier>(`/api/v1/dossiers/${id}`),
+  create: (data: {
+    lignes: Array<{
+      usager_id: string;
+      types: string[];
+      date_demande: string;
+      destinataire_usager_id?: string;
+      canal_notification?: string;
+    }>;
+  }) => api.post<Dossier>("/api/v1/dossiers", data),
+  remove: (id: string) => api.delete(`/api/v1/dossiers/${id}`),
+  addSuivi: (dossierId: string, commentaire: string) =>
+    api.post<DossierSuivi>(`/api/v1/dossiers/${dossierId}/suivi`, { commentaire }),
+  updateStatut: (pieceId: string, statut: string, commentaire?: string) =>
+    api.patch<{ piece: DossierPiece; suggestNotification: boolean }>(
+      `/api/v1/dossiers/pieces/${pieceId}/statut`,
+      { statut, commentaire }
+    ),
+  updatePiece: (pieceId: string, data: Partial<DossierPiece>) =>
+    api.put<DossierPiece>(`/api/v1/dossiers/pieces/${pieceId}`, data),
+  removePiece: (pieceId: string) => api.delete(`/api/v1/dossiers/pieces/${pieceId}`),
+  notify: (pieceId: string, canal: "sms" | "email") =>
+    api.post<DossierPiece>(`/api/v1/dossiers/pieces/${pieceId}/notify`, { canal }),
+  getNotifications: (pieceId: string) =>
+    api.get<DossierNotificationLog[]>(`/api/v1/dossiers/pieces/${pieceId}/notifications`),
 };
 
 export const authApi = {

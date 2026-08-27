@@ -102,6 +102,55 @@ async function setupDb() {
       )
     `);
     await client.query(`
+      CREATE TABLE IF NOT EXISTS "${SCHEMA_NAME}".dossiers_pieces_identite (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        created_by VARCHAR(100),
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS "${SCHEMA_NAME}".dossier_pieces (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        dossier_id UUID NOT NULL REFERENCES "${SCHEMA_NAME}".dossiers_pieces_identite(id) ON DELETE CASCADE,
+        usager_id UUID NOT NULL REFERENCES "${SCHEMA_NAME}".usagers(id) ON DELETE RESTRICT,
+        type_piece VARCHAR(20) NOT NULL CHECK (type_piece IN ('CNI','Passeport')),
+        date_demande DATE NOT NULL,
+        statut VARCHAR(20) NOT NULL DEFAULT 'demande' CHECK (statut IN ('demande','ajourne','arrive','recupere')),
+        destinataire_usager_id UUID REFERENCES "${SCHEMA_NAME}".usagers(id) ON DELETE SET NULL,
+        canal_notification VARCHAR(10) NOT NULL DEFAULT 'email' CHECK (canal_notification IN ('sms','email','both')),
+        date_arrivee TIMESTAMPTZ,
+        date_recuperation TIMESTAMPTZ,
+        notifie BOOLEAN NOT NULL DEFAULT FALSE,
+        date_notification TIMESTAMPTZ,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(dossier_id, usager_id, type_piece)
+      )
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS "${SCHEMA_NAME}".dossier_suivi (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        dossier_id UUID NOT NULL REFERENCES "${SCHEMA_NAME}".dossiers_pieces_identite(id) ON DELETE CASCADE,
+        agent VARCHAR(100) NOT NULL,
+        commentaire TEXT NOT NULL,
+        automatique BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS "${SCHEMA_NAME}".dossier_notifications (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        dossier_piece_id UUID NOT NULL REFERENCES "${SCHEMA_NAME}".dossier_pieces(id) ON DELETE CASCADE,
+        canal VARCHAR(10) NOT NULL CHECK (canal IN ('sms','email')),
+        destinataire VARCHAR(255) NOT NULL,
+        statut VARCHAR(20) NOT NULL CHECK (statut IN ('envoye','echec')),
+        erreur TEXT,
+        envoye_par VARCHAR(100) NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await client.query(`
       CREATE TABLE IF NOT EXISTS "${SCHEMA_NAME}".logs_acces (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         utilisateur VARCHAR(100),
@@ -151,6 +200,7 @@ async function setupDb() {
       `ALTER TABLE "${SCHEMA_NAME}".templates ADD COLUMN IF NOT EXISTS usager_labels JSONB DEFAULT NULL`,
       `ALTER TABLE "${SCHEMA_NAME}".attestations ADD COLUMN IF NOT EXISTS usager2_id UUID REFERENCES "${SCHEMA_NAME}".usagers(id) ON DELETE SET NULL`,
       `ALTER TABLE "${SCHEMA_NAME}".attestations ADD COLUMN IF NOT EXISTS usager3_id UUID REFERENCES "${SCHEMA_NAME}".usagers(id) ON DELETE SET NULL`,
+      `ALTER TABLE "${SCHEMA_NAME}".dossier_suivi ADD COLUMN IF NOT EXISTS automatique BOOLEAN NOT NULL DEFAULT FALSE`,
     ];
     for (const sql of alterCols) await client.query(sql);
 
@@ -169,6 +219,10 @@ async function setupDb() {
       CREATE INDEX IF NOT EXISTS idx_attestations_usager ON "${SCHEMA_NAME}".attestations(usager_id);
       CREATE INDEX IF NOT EXISTS idx_attestations_statut ON "${SCHEMA_NAME}".attestations(statut);
       CREATE INDEX IF NOT EXISTS idx_logs_acces_action ON "${SCHEMA_NAME}".logs_acces(action);
+      CREATE INDEX IF NOT EXISTS idx_dossier_pieces_dossier ON "${SCHEMA_NAME}".dossier_pieces(dossier_id);
+      CREATE INDEX IF NOT EXISTS idx_dossier_pieces_usager ON "${SCHEMA_NAME}".dossier_pieces(usager_id);
+      CREATE INDEX IF NOT EXISTS idx_dossier_pieces_statut ON "${SCHEMA_NAME}".dossier_pieces(statut);
+      CREATE INDEX IF NOT EXISTS idx_dossier_suivi_dossier ON "${SCHEMA_NAME}".dossier_suivi(dossier_id);
     `);
 
     console.log(`[DB] Schema "${SCHEMA_NAME}" initialized`);

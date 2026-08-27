@@ -2,6 +2,11 @@ const express = require("express");
 const router = express.Router();
 const { pool, SCHEMA_NAME } = require("../../config/pg_db");
 const axios = require("axios");
+const {
+  DEFAULT_TEMPLATES,
+  getDossierMessageTemplates,
+  setDossierMessageTemplates,
+} = require("../../utils/messageTemplates");
 
 const PARAMS_TABLE = `"${SCHEMA_NAME}".config_params`;
 
@@ -326,6 +331,76 @@ router.post("/synbird/test", async (_req, res, next) => {
         baseUrl,
       });
     }
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * @openapi
+ * /api/v1/parametrage/dossiers-messages:
+ *   get:
+ *     tags: [Parametrage]
+ *     summary: Recuperer les modeles de messages (SMS/email) pour les dossiers CNI/Passeport
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Modeles de messages
+ */
+router.get("/dossiers-messages", async (_req, res, next) => {
+  try {
+    const templates = await getDossierMessageTemplates();
+    res.json({
+      sms_template: templates.dossier_sms_template,
+      email_subject_template: templates.dossier_email_subject_template,
+      email_content_template: templates.dossier_email_content_template,
+      defaults: {
+        sms_template: DEFAULT_TEMPLATES.dossier_sms_template,
+        email_subject_template: DEFAULT_TEMPLATES.dossier_email_subject_template,
+        email_content_template: DEFAULT_TEMPLATES.dossier_email_content_template,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * @openapi
+ * /api/v1/parametrage/dossiers-messages:
+ *   put:
+ *     tags: [Parametrage]
+ *     summary: Modifier les modeles de messages (SMS/email) pour les dossiers CNI/Passeport
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               sms_template:
+ *                 type: string
+ *               email_subject_template:
+ *                 type: string
+ *               email_content_template:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Modeles mis a jour
+ */
+router.put("/dossiers-messages", async (req, res, next) => {
+  try {
+    const { sms_template, email_subject_template, email_content_template } = req.body;
+    await setDossierMessageTemplates({ sms_template, email_subject_template, email_content_template });
+    const templates = await getDossierMessageTemplates();
+    res.json({
+      sms_template: templates.dossier_sms_template,
+      email_subject_template: templates.dossier_email_subject_template,
+      email_content_template: templates.dossier_email_content_template,
+    });
   } catch (err) {
     next(err);
   }

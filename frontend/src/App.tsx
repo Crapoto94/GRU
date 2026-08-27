@@ -14,6 +14,10 @@ import ParametrageAttestations from "./pages/ParametrageAttestations";
 import ParametrageDatabase from "./pages/ParametrageDatabase";
 import ParametrageApiVille from "./pages/ParametrageApiVille";
 import ParametrageSynbird from "./pages/ParametrageSynbird";
+import ParametrageMessagesDossiers from "./pages/ParametrageMessagesDossiers";
+import DossiersList from "./pages/DossiersList";
+import DossierForm from "./pages/DossierForm";
+import DossierDetail from "./pages/DossierDetail";
 import UsersPage from "./pages/UsersPage";
 import LogsPage from "./pages/LogsPage";
 
@@ -55,10 +59,14 @@ export default function App() {
                   <Route path="/usagers/:id" element={<UsagerForm />} />
                   <Route path="/attestations" element={<AttestationsList />} />
                   <Route path="/attestations/nouvelle" element={<AttestationGenerate />} />
+                  <Route path="/dossiers" element={<DossiersList />} />
+                  <Route path="/dossiers/nouveau" element={<DossierForm />} />
+                  <Route path="/dossiers/:id" element={<DossierDetail />} />
                   <Route path="/parametrage/attestations" element={<ParametrageAttestations />} />
                   <Route path="/parametrage/base-de-donnees" element={<ParametrageDatabase />} />
                   <Route path="/parametrage/api-ville" element={<ParametrageApiVille />} />
                   <Route path="/parametrage/synbird" element={<ParametrageSynbird />} />
+                  <Route path="/parametrage/messages-dossiers" element={<ParametrageMessagesDossiers />} />
                   <Route path="/parametrage/utilisateurs" element={<UsersPage />} />
                   <Route path="/parametrage/logs" element={<LogsPage />} />
                   <Route path="*" element={<Navigate to="/" replace />} />
