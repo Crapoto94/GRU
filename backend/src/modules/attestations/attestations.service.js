@@ -34,31 +34,35 @@ const STATUT_OCCUPATION_LABELS = {
   autre: "Autre",
 };
 
-function prepareLogementData(logement) {
+function prepareLogementData(logement, prefix) {
   const statut = logement?.statut_occupation || "";
   const label = statut
     ? STATUT_OCCUPATION_LABELS[statut] + (statut === "autre" && logement.statut_occupation_precision ? ` : ${logement.statut_occupation_precision}` : "")
     : "";
   return {
-    logement_numero_batiment_escalier: logement?.numero_batiment_escalier || "",
-    logement_surface: logement?.surface_logement != null ? String(logement.surface_logement) : "",
-    logement_nombre_pieces: logement?.nombre_pieces != null ? String(logement.nombre_pieces) : "",
-    logement_etat_sanitaire: logement?.etat_sanitaire || "",
-    logement_occupants_habituels: logement?.occupants_habituels_details || "",
-    logement_occupants_permanents: logement?.occupants_permanents != null ? String(logement.occupants_permanents) : "",
-    logement_occupants_temporaires: logement?.occupants_temporaires != null ? String(logement.occupants_temporaires) : "",
-    logement_statut_occupation: label,
-    logement_statut_occupation_precision: logement?.statut_occupation_precision || "",
-    logement_case_proprietaire: statut === "proprietaire" ? "X" : "",
-    logement_case_locataire: statut === "locataire" ? "X" : "",
-    logement_case_autre: statut === "autre" ? "X" : "",
+    [`${prefix}_adresse_complete`]: logement?.adresse || "",
+    [`${prefix}_complement_adresse`]: logement?.complement_adresse || "",
+    [`${prefix}_code_postal`]: logement?.code_postal || "",
+    [`${prefix}_ville`]: logement?.ville || "",
+    [`${prefix}_pays`]: logement?.pays || "",
+    [`${prefix}_numero_batiment_escalier`]: logement?.numero_batiment_escalier || "",
+    [`${prefix}_surface`]: logement?.surface_logement != null ? String(logement.surface_logement) : "",
+    [`${prefix}_nombre_pieces`]: logement?.nombre_pieces != null ? String(logement.nombre_pieces) : "",
+    [`${prefix}_etat_sanitaire`]: logement?.etat_sanitaire || "",
+    [`${prefix}_occupants_habituels`]: logement?.occupants_habituels_details || "",
+    [`${prefix}_occupants_permanents`]: logement?.occupants_permanents != null ? String(logement.occupants_permanents) : "",
+    [`${prefix}_occupants_temporaires`]: logement?.occupants_temporaires != null ? String(logement.occupants_temporaires) : "",
+    [`${prefix}_statut_occupation`]: label,
+    [`${prefix}_statut_occupation_precision`]: logement?.statut_occupation_precision || "",
+    [`${prefix}_case_proprietaire`]: statut === "proprietaire" ? "X" : "",
+    [`${prefix}_case_locataire`]: statut === "locataire" ? "X" : "",
+    [`${prefix}_case_autre`]: statut === "autre" ? "X" : "",
   };
 }
 
 async function prepareUsagerData(usager) {
   const isMale = usager.civilite === "M.";
   const isNeutral = usager.civilite === "Mx";
-  const logement = await logementRepository.findByUsagerId(usager.id);
   return {
     civilite: usager.civilite || "",
     nom: formatNom(usager.nom) || "",
@@ -89,7 +93,6 @@ async function prepareUsagerData(usager) {
     code_postal: usager.code_postal || "",
     ville: usager.ville || "",
     pays: usager.pays || "France",
-    ...prepareLogementData(logement),
   };
 }
 
@@ -120,7 +123,7 @@ const attestationService = {
     return attestation;
   },
 
-  async generate(usagerId, templateId, customData, user, ip, usager2Id, usager3Id) {
+  async generate(usagerId, templateId, customData, user, ip, usager2Id, usager3Id, logementConcerne) {
     const usager = await usagerRepository.findById(usagerId);
     if (!usager) throw Object.assign(new Error("Usager non trouve"), { status: 404 });
 
@@ -128,6 +131,18 @@ const attestationService = {
     if (!template) throw Object.assign(new Error("Template non trouve"), { status: 404 });
 
     const nbUsagers = template.nb_usagers || 1;
+
+    let logementChoisi = null;
+    if (template.usage_logement_principal && template.usage_logement_secondaire) {
+      if (logementConcerne !== "principal" && logementConcerne !== "secondaire") {
+        throw Object.assign(new Error("logement_concerne (principal ou secondaire) est requis pour ce template"), { status: 400 });
+      }
+      logementChoisi = logementConcerne;
+    } else if (template.usage_logement_principal) {
+      logementChoisi = "principal";
+    } else if (template.usage_logement_secondaire) {
+      logementChoisi = "secondaire";
+    }
 
     let usager2 = null;
     if (nbUsagers >= 2 && usager2Id) {
@@ -169,6 +184,14 @@ const attestationService = {
           mergeData[`${key}_${field}`] = val;
         }
       }
+    }
+
+    Object.assign(mergeData, prepareLogementData(null, "logement1"));
+    Object.assign(mergeData, prepareLogementData(null, "logement2"));
+    if (logementChoisi) {
+      const logement = await logementRepository.findByUsagerId(usagerId, logementChoisi);
+      const prefix = logementChoisi === "principal" ? "logement1" : "logement2";
+      Object.assign(mergeData, prepareLogementData(logement, prefix));
     }
 
     const datesMemeType = await attestationRepository.findDatesByUsagerAndTemplate(usagerId, templateId);

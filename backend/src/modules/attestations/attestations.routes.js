@@ -146,6 +146,8 @@ router.post("/templates/upload", upload.single("file"), async (req, res, next) =
       variables: req.body.variables ? JSON.parse(req.body.variables) : [],
       nb_usagers: parseInt(req.body.nb_usagers, 10) || 1,
       usager_labels: req.body.usager_labels ? JSON.parse(req.body.usager_labels) : null,
+      usage_logement_principal: req.body.usage_logement_principal === "true",
+      usage_logement_secondaire: req.body.usage_logement_secondaire === "true",
     });
     res.status(201).json(template);
   } catch (err) {
@@ -274,6 +276,8 @@ router.put("/templates/:id", upload.single("file"), async (req, res, next) => {
     if (req.body.variables !== undefined) {
       try { data.variables = JSON.parse(req.body.variables); } catch { /* ignore */ }
     }
+    if (req.body.usage_logement_principal !== undefined) data.usage_logement_principal = req.body.usage_logement_principal === "true";
+    if (req.body.usage_logement_secondaire !== undefined) data.usage_logement_secondaire = req.body.usage_logement_secondaire === "true";
 
     if (req.file) {
       const oldFilePath = path.join(TEMPLATES_DIR, existing.fichier_original);
@@ -376,7 +380,7 @@ router.get("/:id", async (req, res, next) => {
  */
 router.post("/generate", async (req, res, next) => {
   try {
-    const { usager_id, usager2_id, usager3_id, template_id, custom_data } = req.body;
+    const { usager_id, usager2_id, usager3_id, template_id, custom_data, logement_concerne } = req.body;
     if (!usager_id || !template_id) {
       throw Object.assign(new Error("usager_id et template_id sont requis"), { status: 400 });
     }
@@ -387,7 +391,8 @@ router.post("/generate", async (req, res, next) => {
       req.user?.login || "system",
       req.ip,
       usager2_id,
-      usager3_id
+      usager3_id,
+      logement_concerne
     );
     res.status(201).json(attestation);
   } catch (err) {

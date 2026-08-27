@@ -283,7 +283,7 @@ router.post("/:id/restore", async (req, res, next) => {
  * /api/v1/usagers/{id}/logement:
  *   get:
  *     tags: [Usagers]
- *     summary: Obtenir les informations de logement d'un usager
+ *     summary: Obtenir les informations de logement d'un usager (principal ou secondaire)
  *     parameters:
  *       - in: path
  *         name: id
@@ -291,13 +291,19 @@ router.post("/:id/restore", async (req, res, next) => {
  *         schema:
  *           type: string
  *           format: uuid
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [principal, secondaire]
+ *           default: principal
  *     responses:
  *       200:
  *         description: Informations de logement (ou null si non renseignees)
  */
 router.get("/:id/logement", async (req, res, next) => {
   try {
-    const logement = await logementService.getByUsagerId(req.params.id);
+    const logement = await logementService.getByUsagerId(req.params.id, req.query.type || "principal");
     res.json(logement);
   } catch (err) {
     next(err);
@@ -309,7 +315,7 @@ router.get("/:id/logement", async (req, res, next) => {
  * /api/v1/usagers/{id}/logement:
  *   put:
  *     tags: [Usagers]
- *     summary: Creer ou modifier les informations de logement d'un usager
+ *     summary: Creer ou modifier les informations de logement d'un usager (principal ou secondaire)
  *     parameters:
  *       - in: path
  *         name: id
@@ -317,13 +323,19 @@ router.get("/:id/logement", async (req, res, next) => {
  *         schema:
  *           type: string
  *           format: uuid
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [principal, secondaire]
+ *           default: principal
  *     responses:
  *       200:
  *         description: Informations de logement sauvegardees
  */
 router.put("/:id/logement", async (req, res, next) => {
   try {
-    const logement = await logementService.save(req.params.id, req.body, req.user?.login || "system", req.ip);
+    const logement = await logementService.save(req.params.id, req.query.type || "principal", req.body, req.user?.login || "system", req.ip);
     res.json(logement);
   } catch (err) {
     next(err);
@@ -335,7 +347,7 @@ router.put("/:id/logement", async (req, res, next) => {
  * /api/v1/usagers/{id}/logement:
  *   delete:
  *     tags: [Usagers]
- *     summary: Supprimer les informations de logement d'un usager
+ *     summary: Supprimer les informations de logement d'un usager (principal ou secondaire)
  *     parameters:
  *       - in: path
  *         name: id
@@ -343,13 +355,19 @@ router.put("/:id/logement", async (req, res, next) => {
  *         schema:
  *           type: string
  *           format: uuid
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [principal, secondaire]
+ *           default: principal
  *     responses:
  *       204:
  *         description: Supprime
  */
 router.delete("/:id/logement", async (req, res, next) => {
   try {
-    await logementService.remove(req.params.id, req.user?.login || "system", req.ip);
+    await logementService.remove(req.params.id, req.query.type || "principal", req.user?.login || "system", req.ip);
     res.status(204).send();
   } catch (err) {
     next(err);

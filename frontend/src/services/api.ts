@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { Usager, Template, Attestation, PaginatedResponse, Dossier, DossierPiece, DossierSuivi, DossierNotificationLog, DossierListItem, Logement } from "../types";
+import type { Usager, Template, Attestation, PaginatedResponse, Dossier, DossierPiece, DossierSuivi, DossierNotificationLog, DossierListItem, Logement, TypeLogement } from "../types";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "",
@@ -26,10 +26,12 @@ export const usagersApi = {
     api.get<{ valid: boolean; suggestions: Array<{ label: string; score: number }> }>("/api/v1/usagers/validate/adresse", { params: { q } }),
   checkDoublon: (params: { nom?: string; date_naissance?: string; telephone?: string; exclude_id?: string }) =>
     api.get<{ nom_date: Usager[]; telephone: Usager[] }>("/api/v1/usagers/check-doublon", { params }),
-  getLogement: (id: string) => api.get<Logement | null>(`/api/v1/usagers/${id}/logement`),
-  saveLogement: (id: string, data: Partial<Logement>) =>
-    api.put<Logement>(`/api/v1/usagers/${id}/logement`, data),
-  removeLogement: (id: string) => api.delete(`/api/v1/usagers/${id}/logement`),
+  getLogement: (id: string, type: TypeLogement = "principal") =>
+    api.get<Logement | null>(`/api/v1/usagers/${id}/logement`, { params: { type } }),
+  saveLogement: (id: string, type: TypeLogement, data: Partial<Logement>) =>
+    api.put<Logement>(`/api/v1/usagers/${id}/logement`, data, { params: { type } }),
+  removeLogement: (id: string, type: TypeLogement) =>
+    api.delete(`/api/v1/usagers/${id}/logement`, { params: { type } }),
   importSynbird: (contact: string) =>
     api.get<{
       exists: boolean;
@@ -59,7 +61,7 @@ export const attestationsApi = {
   list: (params?: { statut?: string; usager_id?: string }) =>
     api.get<PaginatedResponse<Attestation>>("/api/v1/attestations", { params }),
   getById: (id: string) => api.get<Attestation>(`/api/v1/attestations/${id}`),
-  generate: (data: { usager_id: string; usager2_id?: string; usager3_id?: string; template_id: string; custom_data?: Record<string, string> }) =>
+  generate: (data: { usager_id: string; usager2_id?: string; usager3_id?: string; template_id: string; custom_data?: Record<string, string>; logement_concerne?: "principal" | "secondaire" }) =>
     api.post<Attestation>("/api/v1/attestations/generate", data),
   download: (id: string) =>
     api.get(`/api/v1/attestations/${id}/download`, { responseType: "blob" }),

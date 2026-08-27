@@ -70,6 +70,8 @@ async function setupDb() {
         description TEXT,
         fichier_original VARCHAR(500) NOT NULL,
         variables JSONB NOT NULL DEFAULT '[]',
+        usage_logement_principal BOOLEAN NOT NULL DEFAULT FALSE,
+        usage_logement_secondaire BOOLEAN NOT NULL DEFAULT FALSE,
         actif BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -104,7 +106,13 @@ async function setupDb() {
     await client.query(`
       CREATE TABLE IF NOT EXISTS "${SCHEMA_NAME}".logements (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        usager_id UUID NOT NULL UNIQUE REFERENCES "${SCHEMA_NAME}".usagers(id) ON DELETE CASCADE,
+        usager_id UUID NOT NULL REFERENCES "${SCHEMA_NAME}".usagers(id) ON DELETE CASCADE,
+        type_logement VARCHAR(20) NOT NULL DEFAULT 'principal' CHECK (type_logement IN ('principal','secondaire')),
+        adresse VARCHAR(500),
+        complement_adresse VARCHAR(255),
+        code_postal VARCHAR(5),
+        ville VARCHAR(255),
+        pays VARCHAR(100) DEFAULT 'France',
         numero_batiment_escalier VARCHAR(255),
         surface_logement NUMERIC(6,2),
         nombre_pieces INTEGER,
@@ -115,7 +123,8 @@ async function setupDb() {
         statut_occupation VARCHAR(20) CHECK (statut_occupation IN ('proprietaire','locataire','autre')),
         statut_occupation_precision VARCHAR(255),
         created_at TIMESTAMPTZ DEFAULT NOW(),
-        updated_at TIMESTAMPTZ DEFAULT NOW()
+        updated_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(usager_id, type_logement)
       )
     `);
     await client.query(`
@@ -218,8 +227,31 @@ async function setupDb() {
       `ALTER TABLE "${SCHEMA_NAME}".attestations ADD COLUMN IF NOT EXISTS usager2_id UUID REFERENCES "${SCHEMA_NAME}".usagers(id) ON DELETE SET NULL`,
       `ALTER TABLE "${SCHEMA_NAME}".attestations ADD COLUMN IF NOT EXISTS usager3_id UUID REFERENCES "${SCHEMA_NAME}".usagers(id) ON DELETE SET NULL`,
       `ALTER TABLE "${SCHEMA_NAME}".dossier_suivi ADD COLUMN IF NOT EXISTS automatique BOOLEAN NOT NULL DEFAULT FALSE`,
+      `ALTER TABLE "${SCHEMA_NAME}".logements ADD COLUMN IF NOT EXISTS type_logement VARCHAR(20) NOT NULL DEFAULT 'principal'`,
+      `ALTER TABLE "${SCHEMA_NAME}".logements ADD COLUMN IF NOT EXISTS adresse VARCHAR(500)`,
+      `ALTER TABLE "${SCHEMA_NAME}".logements ADD COLUMN IF NOT EXISTS complement_adresse VARCHAR(255)`,
+      `ALTER TABLE "${SCHEMA_NAME}".logements ADD COLUMN IF NOT EXISTS code_postal VARCHAR(5)`,
+      `ALTER TABLE "${SCHEMA_NAME}".logements ADD COLUMN IF NOT EXISTS ville VARCHAR(255)`,
+      `ALTER TABLE "${SCHEMA_NAME}".logements ADD COLUMN IF NOT EXISTS pays VARCHAR(100) DEFAULT 'France'`,
+      `ALTER TABLE "${SCHEMA_NAME}".templates ADD COLUMN IF NOT EXISTS usage_logement_principal BOOLEAN NOT NULL DEFAULT FALSE`,
+      `ALTER TABLE "${SCHEMA_NAME}".templates ADD COLUMN IF NOT EXISTS usage_logement_secondaire BOOLEAN NOT NULL DEFAULT FALSE`,
     ];
     for (const sql of alterCols) await client.query(sql);
+
+    await client.query(`
+      DO $$
+      BEGIN
+        IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'logements_usager_id_key') THEN
+          ALTER TABLE "${SCHEMA_NAME}".logements DROP CONSTRAINT logements_usager_id_key;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'logements_usager_id_type_logement_key') THEN
+          ALTER TABLE "${SCHEMA_NAME}".logements ADD CONSTRAINT logements_usager_id_type_logement_key UNIQUE (usager_id, type_logement);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'logements_type_logement_check') THEN
+          ALTER TABLE "${SCHEMA_NAME}".logements ADD CONSTRAINT logements_type_logement_check CHECK (type_logement IN ('principal','secondaire'));
+        END IF;
+      END $$;
+    `);
 
     const dropCols = [
       `ALTER TABLE "${SCHEMA_NAME}".usagers DROP COLUMN IF EXISTS numero_voie`,

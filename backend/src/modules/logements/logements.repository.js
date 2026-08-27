@@ -3,18 +3,28 @@ const { db, SCHEMA_NAME } = require("../../config/pg_db");
 const TABLE = `"${SCHEMA_NAME}".logements`;
 
 const logementRepository = {
-  async findByUsagerId(usagerId) {
-    return db.get(`SELECT * FROM ${TABLE} WHERE usager_id = $1`, [usagerId]);
+  async findByUsagerId(usagerId, typeLogement = "principal") {
+    return db.get(`SELECT * FROM ${TABLE} WHERE usager_id = $1 AND type_logement = $2`, [usagerId, typeLogement]);
   },
 
-  async upsert(usagerId, data) {
+  async findAllByUsagerId(usagerId) {
+    return db.all(`SELECT * FROM ${TABLE} WHERE usager_id = $1`, [usagerId]);
+  },
+
+  async upsert(usagerId, typeLogement, data) {
     const result = await db.run(
       `INSERT INTO ${TABLE} (
-        usager_id, numero_batiment_escalier, surface_logement, nombre_pieces,
+        usager_id, type_logement, adresse, complement_adresse, code_postal, ville, pays,
+        numero_batiment_escalier, surface_logement, nombre_pieces,
         etat_sanitaire, occupants_habituels_details, occupants_permanents,
         occupants_temporaires, statut_occupation, statut_occupation_precision
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-      ON CONFLICT (usager_id) DO UPDATE SET
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+      ON CONFLICT (usager_id, type_logement) DO UPDATE SET
+        adresse = EXCLUDED.adresse,
+        complement_adresse = EXCLUDED.complement_adresse,
+        code_postal = EXCLUDED.code_postal,
+        ville = EXCLUDED.ville,
+        pays = EXCLUDED.pays,
         numero_batiment_escalier = EXCLUDED.numero_batiment_escalier,
         surface_logement = EXCLUDED.surface_logement,
         nombre_pieces = EXCLUDED.nombre_pieces,
@@ -28,6 +38,12 @@ const logementRepository = {
       RETURNING *`,
       [
         usagerId,
+        typeLogement,
+        data.adresse || null,
+        data.complement_adresse || null,
+        data.code_postal || null,
+        data.ville || null,
+        data.pays || null,
         data.numero_batiment_escalier || null,
         data.surface_logement || null,
         data.nombre_pieces || null,
@@ -42,8 +58,8 @@ const logementRepository = {
     return result.rows[0];
   },
 
-  async remove(usagerId) {
-    return db.run(`DELETE FROM ${TABLE} WHERE usager_id = $1`, [usagerId]);
+  async remove(usagerId, typeLogement) {
+    return db.run(`DELETE FROM ${TABLE} WHERE usager_id = $1 AND type_logement = $2`, [usagerId, typeLogement]);
   },
 };
 

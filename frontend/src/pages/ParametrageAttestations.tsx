@@ -28,20 +28,30 @@ const VARIABLES_USAGER = [
   { nom: "pays", description: "Pays de l'adresse", exemple: "France" },
 ];
 
-const VARIABLES_LOGEMENT = [
-  { nom: "logement_numero_batiment_escalier", description: "N° de batiment / escalier", exemple: "Bat. B, Esc. 2" },
-  { nom: "logement_surface", description: "Surface du logement en m²", exemple: "67" },
-  { nom: "logement_nombre_pieces", description: "Nombre de pieces du logement", exemple: "3" },
-  { nom: "logement_etat_sanitaire", description: "Etat sanitaire du logement", exemple: "Normal" },
-  { nom: "logement_occupants_habituels", description: "Occupants habituels (age et lien de parente)", exemple: "1 (39 ans, Concubin(e))" },
-  { nom: "logement_occupants_permanents", description: "Nombre d'occupants permanents", exemple: "2" },
-  { nom: "logement_occupants_temporaires", description: "Nombre d'occupants temporaires", exemple: "0" },
-  { nom: "logement_statut_occupation", description: "Statut d'occupation, avec precision si \"Autre\"", exemple: "Propriétaire" },
-  { nom: "logement_statut_occupation_precision", description: "Precision saisie si statut = Autre (vide sinon)", exemple: "" },
-  { nom: "logement_case_proprietaire", description: "\"X\" si proprietaire, vide sinon (pour case a cocher)", exemple: "X" },
-  { nom: "logement_case_locataire", description: "\"X\" si locataire, vide sinon (pour case a cocher)", exemple: "" },
-  { nom: "logement_case_autre", description: "\"X\" si autre statut, vide sinon (pour case a cocher)", exemple: "" },
-];
+function variablesLogement(prefix: "logement1" | "logement2") {
+  const nature = prefix === "logement1" ? "principal" : "secondaire";
+  return [
+    { nom: `${prefix}_adresse_complete`, description: `Adresse du logement ${nature} de l'usager 1 (modifiable, pre-remplie avec l'adresse de l'usager par defaut)`, exemple: "12 rue de la Paix" },
+    { nom: `${prefix}_complement_adresse`, description: `Complement d'adresse du logement ${nature}`, exemple: "Batiment B, 3eme etage" },
+    { nom: `${prefix}_code_postal`, description: `Code postal du logement ${nature}`, exemple: "94200" },
+    { nom: `${prefix}_ville`, description: `Ville du logement ${nature}`, exemple: "Ivry-sur-Seine" },
+    { nom: `${prefix}_pays`, description: `Pays du logement ${nature}`, exemple: "France" },
+    { nom: `${prefix}_numero_batiment_escalier`, description: `N° de batiment / escalier du logement ${nature} de l'usager 1`, exemple: "Bat. B, Esc. 2" },
+    { nom: `${prefix}_surface`, description: `Surface du logement ${nature} de l'usager 1 en m²`, exemple: "67" },
+    { nom: `${prefix}_nombre_pieces`, description: `Nombre de pieces du logement ${nature} de l'usager 1`, exemple: "3" },
+    { nom: `${prefix}_etat_sanitaire`, description: `Etat sanitaire du logement ${nature} de l'usager 1`, exemple: "Normal" },
+    { nom: `${prefix}_occupants_habituels`, description: `Occupants habituels du logement ${nature} (age et lien de parente)`, exemple: "1 (39 ans, Concubin(e))" },
+    { nom: `${prefix}_occupants_permanents`, description: `Nombre d'occupants permanents du logement ${nature}`, exemple: "2" },
+    { nom: `${prefix}_occupants_temporaires`, description: `Nombre d'occupants temporaires du logement ${nature}`, exemple: "0" },
+    { nom: `${prefix}_statut_occupation`, description: `Statut d'occupation du logement ${nature}, avec precision si "Autre"`, exemple: "Propriétaire" },
+    { nom: `${prefix}_statut_occupation_precision`, description: `Precision saisie si statut = Autre (vide sinon) pour le logement ${nature}`, exemple: "" },
+    { nom: `${prefix}_case_proprietaire`, description: `"X" si proprietaire, vide sinon (pour case a cocher) - logement ${nature}`, exemple: "X" },
+    { nom: `${prefix}_case_locataire`, description: `"X" si locataire, vide sinon (pour case a cocher) - logement ${nature}`, exemple: "" },
+    { nom: `${prefix}_case_autre`, description: `"X" si autre statut, vide sinon (pour case a cocher) - logement ${nature}`, exemple: "" },
+  ];
+}
+
+const VARIABLES_LOGEMENT = [...variablesLogement("logement1"), ...variablesLogement("logement2")];
 
 const VARIABLES_SYSTEME = [
   { nom: "date_du_jour", description: "Date du jour au format francais court", exemple: "25/08/2026" },
@@ -115,6 +125,40 @@ function AllowedValuesInput({ value, onBlur, placeholder }: { value: string; onB
   );
 }
 
+function LogementCheckboxes({
+  principal, secondaire, onPrincipal, onSecondaire,
+}: {
+  principal: boolean;
+  secondaire: boolean;
+  onPrincipal: (v: boolean) => void;
+  onSecondaire: (v: boolean) => void;
+}) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">Logement concerne par ce template</label>
+      <div className="flex gap-4">
+        <label className="flex items-center gap-2 text-sm cursor-pointer">
+          <input type="checkbox" checked={principal} onChange={(e) => onPrincipal(e.target.checked)} />
+          Logement principal
+        </label>
+        <label className="flex items-center gap-2 text-sm cursor-pointer">
+          <input type="checkbox" checked={secondaire} onChange={(e) => onSecondaire(e.target.checked)} />
+          Logement secondaire
+        </label>
+      </div>
+      <p className="text-xs text-gray-400 mt-1">
+        {principal && secondaire
+          ? "Les deux sont coches : le choix du logement (principal ou secondaire) sera demande a la generation, pour renseigner uniquement les variables logement1_ (si principal) ou logement2_ (si secondaire)."
+          : principal
+          ? "Les variables logement1_ (logement principal de l'usager 1) seront automatiquement renseignees."
+          : secondaire
+          ? "Les variables logement2_ (logement secondaire de l'usager 1) seront automatiquement renseignees."
+          : "Aucune variable de logement ne sera renseignee pour ce template."}
+      </p>
+    </div>
+  );
+}
+
 function LabelsEditor({ nbUsagers, value, onChange }: { nbUsagers: number; value: Record<string, string>; onChange: (v: Record<string, string>) => void }) {
   const defaults: Record<number, string> = { 1: "Usager 1", 2: "Usager 2", 3: "Usager 3" };
   const keys = Array.from({ length: nbUsagers }, (_, i) => String(i + 1));
@@ -144,6 +188,8 @@ export default function ParametrageAttestations() {
   const [uploadVars, setUploadVars] = useState<Array<{description: string; allowedValues?: string[]}>>([]);
   const [uploadNbUsagers, setUploadNbUsagers] = useState(1);
   const [uploadLabels, setUploadLabels] = useState<Record<string, string>>({});
+  const [uploadLogementPrincipal, setUploadLogementPrincipal] = useState(false);
+  const [uploadLogementSecondaire, setUploadLogementSecondaire] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [aideOuverte, setAideOuverte] = useState(false);
@@ -154,6 +200,8 @@ export default function ParametrageAttestations() {
   const [editVars, setEditVars] = useState<Array<{description: string; allowedValues?: string[]}>>([]);
   const [editNbUsagers, setEditNbUsagers] = useState(1);
   const [editLabels, setEditLabels] = useState<Record<string, string>>({});
+  const [editLogementPrincipal, setEditLogementPrincipal] = useState(false);
+  const [editLogementSecondaire, setEditLogementSecondaire] = useState(false);
   const [editFile, setEditFile] = useState<File | null>(null);
   const [editing, setEditing] = useState(false);
 
@@ -182,6 +230,8 @@ export default function ParametrageAttestations() {
     formData.append("nom", uploadNom);
     formData.append("description", uploadDesc);
     formData.append("nb_usagers", String(uploadNbUsagers));
+    formData.append("usage_logement_principal", String(uploadLogementPrincipal));
+    formData.append("usage_logement_secondaire", String(uploadLogementSecondaire));
     const varsToSend = uploadVars
       .filter((v) => v.description.trim())
       .map(v => ({description: v.description, allowedValues: v.allowedValues || []}));
@@ -200,6 +250,8 @@ export default function ParametrageAttestations() {
       setUploadVars([]);
       setUploadNbUsagers(1);
       setUploadLabels({});
+      setUploadLogementPrincipal(false);
+      setUploadLogementSecondaire(false);
       setUploadFile(null);
       loadTemplates();
     } catch {
@@ -257,6 +309,8 @@ export default function ParametrageAttestations() {
     }
     setEditNbUsagers(t.nb_usagers || 1);
     setEditLabels(t.usager_labels || {});
+    setEditLogementPrincipal(!!t.usage_logement_principal);
+    setEditLogementSecondaire(!!t.usage_logement_secondaire);
     setEditFile(null);
   };
 
@@ -271,6 +325,8 @@ export default function ParametrageAttestations() {
     formData.append("nom", editNom);
     formData.append("description", editDesc);
     formData.append("nb_usagers", String(editNbUsagers));
+    formData.append("usage_logement_principal", String(editLogementPrincipal));
+    formData.append("usage_logement_secondaire", String(editLogementSecondaire));
     // Send full variable objects with allowedValues
     const varsToSend = editVars.map(v => ({description: v.description, allowedValues: v.allowedValues || []}));
     formData.append("variables", JSON.stringify(varsToSend));
@@ -338,7 +394,11 @@ export default function ParametrageAttestations() {
               </div>
             </div>
             <div>
-              <p className="font-medium text-ville-dark mb-1">3. Variables de logement (si renseigne sur la fiche usager)</p>
+              <p className="font-medium text-ville-dark mb-1">3. Variables de logement (toujours celles de l'usager 1 : logement1_ = principal, logement2_ = secondaire)</p>
+              <p className="text-gray-600 text-xs mb-2">
+                Cochez "Logement principal" et/ou "Logement secondaire" pour ce template. Si un seul est coche, les variables correspondantes sont renseignees automatiquement.
+                Si les deux sont coches, le logement concerne (principal ou secondaire) sera demande a la generation, et seules les variables du logement choisi seront renseignees (l'autre groupe reste vide).
+              </p>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs mt-2">
                   <thead><tr className="border-b border-gray-200">
@@ -358,7 +418,7 @@ export default function ParametrageAttestations() {
                 </table>
               </div>
               <p className="text-gray-400 text-xs mt-1">
-                Si aucun logement n'est renseigne pour l'usager, ces variables sont vides.
+                Si le logement principal ou secondaire n'est pas renseigne pour l'usager 1, les variables correspondantes sont vides.
               </p>
             </div>
             <div>
@@ -470,6 +530,12 @@ export default function ParametrageAttestations() {
                 : "Les variables de l'usager sont accessibles directement (ex: {{nom}}, {{prenom}})."}
             </p>
           </div>
+          <LogementCheckboxes
+            principal={uploadLogementPrincipal}
+            secondaire={uploadLogementSecondaire}
+            onPrincipal={setUploadLogementPrincipal}
+            onSecondaire={setUploadLogementSecondaire}
+          />
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Fichier Word (.docx) *</label>
             <input
@@ -603,6 +669,12 @@ export default function ParametrageAttestations() {
                   <LabelsEditor nbUsagers={editNbUsagers} value={editLabels} onChange={setEditLabels} />
                 )}
               </div>
+              <LogementCheckboxes
+                principal={editLogementPrincipal}
+                secondaire={editLogementSecondaire}
+                onPrincipal={setEditLogementPrincipal}
+                onSecondaire={setEditLogementSecondaire}
+              />
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Variables supplementaires</label>
                 <VariablesEditor value={editVars} onChange={setEditVars} />

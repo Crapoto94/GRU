@@ -20,9 +20,13 @@ const attestationRepository = {
 
   async createTemplate(data) {
     const result = await db.run(
-      `INSERT INTO ${TABLE_TEMPLATES} (nom, description, fichier_original, variables, nb_usagers, usager_labels)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [data.nom, data.description || null, data.fichier_original, JSON.stringify(data.variables || []), data.nb_usagers || 1, data.usager_labels ? JSON.stringify(data.usager_labels) : null]
+      `INSERT INTO ${TABLE_TEMPLATES} (nom, description, fichier_original, variables, nb_usagers, usager_labels, usage_logement_principal, usage_logement_secondaire)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      [
+        data.nom, data.description || null, data.fichier_original, JSON.stringify(data.variables || []), data.nb_usagers || 1,
+        data.usager_labels ? JSON.stringify(data.usager_labels) : null,
+        !!data.usage_logement_principal, !!data.usage_logement_secondaire,
+      ]
     );
     return result.rows ? result.rows[0] : result;
   },
@@ -31,7 +35,7 @@ const attestationRepository = {
     const fields = [];
     const params = [];
     let idx = 1;
-    for (const key of ["nom", "description", "fichier_original", "variables", "actif", "nb_usagers", "usager_labels"]) {
+    for (const key of ["nom", "description", "fichier_original", "variables", "actif", "nb_usagers", "usager_labels", "usage_logement_principal", "usage_logement_secondaire"]) {
       if (data[key] !== undefined) {
         fields.push(`"${key}" = $${idx}`);
         params.push((key === "variables" || key === "usager_labels") ? JSON.stringify(data[key]) : data[key]);

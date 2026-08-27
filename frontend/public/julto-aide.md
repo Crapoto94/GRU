@@ -175,7 +175,41 @@ Un bouton **Nouveautés** dans le menu latéral ouvre l'historique des versions 
 | `ville`              | Ville                                | Paris            |
 | `pays`               | Pays                                 | France           |
 
-### 7.2 Variables système
+### 7.2 Variables de logement (toujours celles de l'usager 1, jamais préfixées par usager2_/usager3_)
+
+Un usager peut avoir un logement principal et/ou un logement secondaire, gérés via deux onglets sur la fiche logement de l'usager. `logement1_` = logement principal, `logement2_` = logement secondaire.
+
+**Configuration sur le template** : dans le paramétrage d'un gabarit d'attestation, deux cases à cocher « Logement principal » / « Logement secondaire » déterminent quelles variables sont utilisées :
+- Une seule case cochée → les variables du logement correspondant (`logement1_` ou `logement2_`) sont renseignées automatiquement à la génération.
+- Les deux cases cochées → à la génération de l'attestation, il est demandé quel logement est concerné (principal ou secondaire) ; seules les variables du logement choisi sont renseignées, l'autre groupe reste vide.
+- Aucune case cochée → aucune variable de logement n'est renseignée pour ce template.
+
+Toutes les variables `logement1_*` et `logement2_*` existent toujours dans le document, même si le groupe correspondant n'est pas utilisé par le template ou pas rempli pour l'usager — elles sont alors simplement vides (jamais « undefined »).
+
+| Variable                                   | Description                                              | Exemple          |
+|---------------------------------------------|-----------------------------------------------------------|------------------|
+| `logement1_adresse_complete`                 | Adresse du logement principal (modifiable, pré-remplie avec l'adresse de l'usager par défaut) | 12 rue de la Paix |
+| `logement1_complement_adresse`               | Complément d'adresse du logement principal                  | Bâtiment B, 3e étage |
+| `logement1_code_postal`                      | Code postal du logement principal                           | 94200            |
+| `logement1_ville`                            | Ville du logement principal                                 | Ivry-sur-Seine   |
+| `logement1_pays`                             | Pays du logement principal                                  | France           |
+| `logement1_numero_batiment_escalier`         | N° de bâtiment / escalier (logement principal)             | Bât. B, Esc. 2   |
+| `logement1_surface`                          | Surface en m² (logement principal)                         | 67               |
+| `logement1_nombre_pieces`                    | Nombre de pièces (logement principal)                      | 3                |
+| `logement1_etat_sanitaire`                   | État sanitaire (logement principal)                        | Normal           |
+| `logement1_occupants_habituels`              | Occupants habituels, âge et lien de parenté (principal)     | 1 (39 ans, Concubin(e)) |
+| `logement1_occupants_permanents`             | Nombre d'occupants permanents (logement principal)          | 2                |
+| `logement1_occupants_temporaires`            | Nombre d'occupants temporaires (logement principal)         | 0                |
+| `logement1_statut_occupation`                | Statut d'occupation, avec précision si « Autre » (principal)| Propriétaire     |
+| `logement1_statut_occupation_precision`      | Précision si statut = Autre, vide sinon (principal)          |                  |
+| `logement1_case_proprietaire`                | « X » si propriétaire, vide sinon (principal)                | X                |
+| `logement1_case_locataire`                   | « X » si locataire, vide sinon (principal)                   |                  |
+| `logement1_case_autre`                       | « X » si autre statut, vide sinon (principal)                |                  |
+| `logement2_*`                                | Mêmes variables que ci-dessus, pour le logement secondaire  |                  |
+
+Si le logement principal ou secondaire n'est pas renseigné pour l'usager 1, les variables correspondantes sont vides.
+
+### 7.3 Variables système
 
 | Variable            | Description                          | Exemple          |
 |---------------------|--------------------------------------|------------------|
@@ -184,7 +218,7 @@ Un bouton **Nouveautés** dans le menu latéral ouvre l'historique des versions 
 | `usager1_historique_dates_meme_type` | Dates (séparées par une virgule) des attestations du même type déjà délivrées à l'usager 1 | 12/01/2025, 03/06/2025 |
 | `historique_dates_usager1_usager2` | Dates (séparées par une virgule) des attestations du même type déjà délivrées au même couple usager 1 / usager 2 | 12/01/2025, 03/06/2025 |
 
-### 7.3 Variables personnalisées
+### 7.4 Variables personnalisées
 Définies lors de la création du template. Accès direct via `{{variable1}}`, `{{variable2}}`, etc.
 Si des valeurs autorisées sont définies → liste déroulante à la génération.
 

@@ -18,6 +18,7 @@ export default function AttestationGenerate() {
   const [selectedUsager2, setSelectedUsager2] = useState("");
   const [selectedUsager3, setSelectedUsager3] = useState("");
   const [customData, setCustomData] = useState<Record<string, string>>({});
+  const [logementConcerne, setLogementConcerne] = useState<"" | "principal" | "secondaire">("");
   const [generating, setGenerating] = useState(false);
   const [searchUsager, setSearchUsager] = useState("");
   const [searchUsager2, setSearchUsager2] = useState("");
@@ -26,6 +27,7 @@ export default function AttestationGenerate() {
   const activeTemplate = templates.find((t) => t.id === selectedTemplate);
   const nbUsagers = activeTemplate?.nb_usagers || 1;
   const labels = activeTemplate?.usager_labels || {};
+  const logementAmbigu = !!activeTemplate?.usage_logement_principal && !!activeTemplate?.usage_logement_secondaire;
 
   useEffect(() => {
     attestationsApi.listTemplates().then((res) => setTemplates(res.data.rows));
@@ -45,13 +47,9 @@ export default function AttestationGenerate() {
       const tpl = templates.find((t) => t.id === selectedTemplate);
       if (tpl && tpl.variables) {
         const initial: Record<string, string> = {};
-        tpl.variables.forEach((varDef, i) => {
+        tpl.variables.forEach((_varDef, i) => {
           const key = `variable${i + 1}`;
-          if (varDef.allowedValues && varDef.allowedValues.length > 0) {
-            initial[key] = varDef.allowedValues[0];
-          } else {
-            initial[key] = "";
-          }
+          initial[key] = "";
         });
         setCustomData(initial);
       } else {
@@ -76,6 +74,10 @@ export default function AttestationGenerate() {
       toast.error("Selectionnez le troisieme usager pour ce template");
       return;
     }
+    if (logementAmbigu && !logementConcerne) {
+      toast.error("Indiquez quel logement (principal ou secondaire) est concerne");
+      return;
+    }
     setGenerating(true);
     try {
       const res = await attestationsApi.generate({
@@ -84,6 +86,7 @@ export default function AttestationGenerate() {
         usager3_id: nbUsagers >= 3 ? selectedUsager3 : undefined,
         template_id: selectedTemplate,
         custom_data: Object.keys(customData).length > 0 ? customData : undefined,
+        logement_concerne: logementConcerne || undefined,
       });
       toast.success("Attestation generee !");
       navigate("/attestations");
@@ -180,6 +183,7 @@ export default function AttestationGenerate() {
               setSelectedUsager(preselectedUsager);
               setSelectedUsager2("");
               setSelectedUsager3("");
+              setLogementConcerne("");
             }}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
           >
@@ -225,6 +229,35 @@ export default function AttestationGenerate() {
           </>
         )}
 
+        {selectedTemplate && logementAmbigu && (
+          <section>
+            <h2 className="text-lg font-semibold text-ville-primary mb-4">Logement concerne</h2>
+            <p className="text-sm text-gray-500 mb-3">
+              Ce template peut concerner le logement principal ou le logement secondaire de {getLabel("1")}. Precisez lequel.
+            </p>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="radio"
+                  name="logement_concerne"
+                  checked={logementConcerne === "principal"}
+                  onChange={() => setLogementConcerne("principal")}
+                />
+                Logement principal
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="radio"
+                  name="logement_concerne"
+                  checked={logementConcerne === "secondaire"}
+                  onChange={() => setLogementConcerne("secondaire")}
+                />
+                Logement secondaire
+              </label>
+            </div>
+          </section>
+        )}
+
         {selectedTemplate && activeTemplate?.variables && activeTemplate.variables.length > 0 && (
           <section>
             <h2 className="text-lg font-semibold text-ville-primary mb-4">Variables supplementaires</h2>
@@ -241,7 +274,7 @@ export default function AttestationGenerate() {
                 if (hasOptions) {
                   inputElement = (
                     <select
-                      value={customData[key] || varDef.allowedValues![0]}
+                      value={customData[key] || ""}
                       onChange={(e) =>
                         setCustomData((prev) => ({
                           ...prev,
@@ -296,7 +329,7 @@ export default function AttestationGenerate() {
           </button>
           <button
             type="submit"
-            disabled={generating || !selectedUsager || !selectedTemplate || (nbUsagers >= 2 && !selectedUsager2) || (nbUsagers >= 3 && !selectedUsager3)}
+            disabled={generating || !selectedUsager || !selectedTemplate || (nbUsagers >= 2 && !selectedUsager2) || (nbUsagers >= 3 && !selectedUsager3) || (logementAmbigu && !logementConcerne)}
             className="flex items-center gap-2 bg-ville-primary text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition disabled:opacity-50 text-sm"
           >
             <FileText size={16} />

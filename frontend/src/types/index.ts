@@ -30,10 +30,17 @@ export interface Usager {
 }
 
 export type StatutOccupation = "proprietaire" | "locataire" | "autre";
+export type TypeLogement = "principal" | "secondaire";
 
 export interface Logement {
   id: string;
   usager_id: string;
+  type_logement: TypeLogement;
+  adresse: string | null;
+  complement_adresse: string | null;
+  code_postal: string | null;
+  ville: string | null;
+  pays: string | null;
   numero_batiment_escalier: string | null;
   surface_logement: number | null;
   nombre_pieces: number | null;
@@ -55,6 +62,8 @@ export interface Template {
   variables: Array<{description: string; allowedValues?: string[]}>;
   nb_usagers: number;
   usager_labels: Record<string, string> | null;
+  usage_logement_principal: boolean;
+  usage_logement_secondaire: boolean;
   actif: boolean;
   created_at: string;
 }

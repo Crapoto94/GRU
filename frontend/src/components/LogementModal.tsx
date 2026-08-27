@@ -3,7 +3,7 @@ import { X, Home, Save, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { usagersApi } from "../services/api";
 import { formatNom, formatPrenom } from "../utils/format";
-import type { Usager, Logement, StatutOccupation } from "../types";
+import type { Usager, Logement, StatutOccupation, TypeLogement } from "../types";
 
 interface Props {
   usager: Usager;
@@ -14,34 +14,51 @@ interface Props {
 type FormState = Partial<Logement>;
 
 const ETATS_SANITAIRES = ["Normal", "Bon", "Vetuste", "Insalubre"];
+const TYPES_LOGEMENT: { value: TypeLogement; label: string }[] = [
+  { value: "principal", label: "Logement principal" },
+  { value: "secondaire", label: "Logement secondaire" },
+];
 
 export default function LogementModal({ usager, onClose, onSaved }: Props) {
+  const [activeType, setActiveType] = useState<TypeLogement>("principal");
   const [form, setForm] = useState<FormState>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [existed, setExisted] = useState(false);
 
   useEffect(() => {
-    usagersApi.getLogement(usager.id)
+    setLoading(true);
+    setForm({});
+    setExisted(false);
+    usagersApi.getLogement(usager.id, activeType)
       .then((res) => {
         if (res.data) {
           setForm(res.data);
           setExisted(true);
+        } else {
+          setForm({
+            adresse: usager.Adresse || "",
+            complement_adresse: usager.complement_adresse || "",
+            code_postal: usager.code_postal || "",
+            ville: usager.ville || "",
+            pays: usager.pays || "France",
+          });
         }
       })
       .catch(() => toast.error("Erreur chargement logement"))
       .finally(() => setLoading(false));
-  }, [usager.id]);
+  }, [usager.id, activeType]);
 
   const set = (key: keyof FormState) => (value: string | number) => setForm((prev) => ({ ...prev, [key]: value }));
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      await usagersApi.saveLogement(usager.id, form);
+      const saved = await usagersApi.saveLogement(usager.id, activeType, form);
+      setForm(saved.data);
+      setExisted(true);
       toast.success("Logement enregistre");
       onSaved();
-      onClose();
     } catch (err: unknown) {
       let msg = "Erreur lors de l'enregistrement";
       if (err && typeof err === "object" && "response" in err) {
@@ -55,12 +72,13 @@ export default function LogementModal({ usager, onClose, onSaved }: Props) {
   };
 
   const handleDelete = async () => {
-    if (!window.confirm("Supprimer les informations de logement de cet usager ?")) return;
+    if (!window.confirm("Supprimer les informations de ce logement ?")) return;
     try {
-      await usagersApi.removeLogement(usager.id);
+      await usagersApi.removeLogement(usager.id, activeType);
+      setForm({});
+      setExisted(false);
       toast.success("Informations de logement supprimees");
       onSaved();
-      onClose();
     } catch {
       toast.error("Erreur lors de la suppression");
     }
@@ -81,20 +99,69 @@ export default function LogementModal({ usager, onClose, onSaved }: Props) {
           </button>
         </div>
 
+        <div className="flex gap-1 px-6 pt-3 border-b border-gray-200">
+          {TYPES_LOGEMENT.map((t) => (
+            <button
+              key={t.value}
+              onClick={() => setActiveType(t.value)}
+              className={`px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 -mb-px ${
+                activeType === t.value
+                  ? "border-ville-primary text-ville-primary"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
         <div className="flex-1 overflow-y-auto p-6 space-y-5">
           {loading ? (
             <p className="text-center text-gray-500 py-8">Chargement...</p>
           ) : (
             <>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Adresse complete</label>
-                <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-600">
-                  {usager.Adresse || "-"}
-                  {usager.code_postal && usager.ville && `, ${usager.code_postal} ${usager.ville}`}
-                </div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Adresse</label>
+                <input
+                  type="text"
+                  value={form.adresse || ""}
+                  onChange={(e) => set("adresse")(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
                 <p className="text-xs text-gray-400 mt-1">
-                  Domicile principal de l'hebergeant — modifiable depuis la fiche usager
+                  Pre-remplie avec l'adresse de l'usager par defaut, modifiable pour ce logement.
                 </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Complement d'adresse</label>
+                <input
+                  type="text"
+                  value={form.complement_adresse || ""}
+                  onChange={(e) => set("complement_adresse")(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Code postal</label>
+                  <input
+                    type="text"
+                    value={form.code_postal || ""}
+                    onChange={(e) => set("code_postal")(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Ville</label>
+                  <input
+                    type="text"
+                    value={form.ville || ""}
+                    onChange={(e) => set("ville")(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  />
+                </div>
               </div>
 
               <div>
