@@ -102,6 +102,23 @@ async function setupDb() {
       )
     `);
     await client.query(`
+      CREATE TABLE IF NOT EXISTS "${SCHEMA_NAME}".logements (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        usager_id UUID NOT NULL UNIQUE REFERENCES "${SCHEMA_NAME}".usagers(id) ON DELETE CASCADE,
+        numero_batiment_escalier VARCHAR(255),
+        surface_logement NUMERIC(6,2),
+        nombre_pieces INTEGER,
+        etat_sanitaire VARCHAR(100),
+        occupants_habituels_details TEXT,
+        occupants_permanents INTEGER,
+        occupants_temporaires INTEGER,
+        statut_occupation VARCHAR(20) CHECK (statut_occupation IN ('proprietaire','locataire','autre')),
+        statut_occupation_precision VARCHAR(255),
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await client.query(`
       CREATE TABLE IF NOT EXISTS "${SCHEMA_NAME}".dossiers_pieces_identite (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         created_by VARCHAR(100),

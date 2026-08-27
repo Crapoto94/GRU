@@ -1,6 +1,19 @@
 {
-  "version": "0.3.0",
+  "version": "0.3.1",
   "changelog": [
+    {
+      "version": "0.3.1",
+      "date": "2026-08-27",
+      "features": [
+        "Fiche logement par usager : surface, pièces, état sanitaire, occupants, statut d'occupation (propriétaire/locataire/autre) — reprend tous les champs du formulaire d'attestation d'accueil",
+        "Icône logement dans la liste des usagers, colorée quand renseignée",
+        "Toutes les informations de logement disponibles comme variables de fusion dans les attestations (logement_surface, logement_case_proprietaire...), y compris en multi-usagers",
+        "Documentation des variables de logement ajoutée dans l'aide de création de template",
+        "Demandes CNI / Passeport : la liste regroupe désormais les pièces par dossier (nombre de personnes, nombre de pièces, répartition des statuts)",
+        "Demandes CNI / Passeport : colonnes triables (usagers, personnes, pièces, statuts, ancienneté, date de création)",
+        "Demandes CNI / Passeport : affichage du nombre de jours d'attente depuis la demande la plus ancienne non encore arrivée"
+      ]
+    },
     {
       "version": "0.3.0",
       "date": "2026-08-27",

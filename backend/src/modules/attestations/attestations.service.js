@@ -5,6 +5,7 @@ const PizZip = require("pizzip");
 const { v4: uuidv4 } = require("uuid");
 const attestationRepository = require("./attestations.repository");
 const usagerRepository = require("../usagers/usagers.repository");
+const logementRepository = require("../logements/logements.repository");
 const { logAcces } = require("../../utils/logger");
 
 const TEMPLATES_DIR = path.resolve(__dirname, "../../../templates");
@@ -27,9 +28,37 @@ function formatNom(name) {
   return (name || "").toUpperCase();
 }
 
-function prepareUsagerData(usager) {
+const STATUT_OCCUPATION_LABELS = {
+  proprietaire: "Propriétaire",
+  locataire: "Locataire",
+  autre: "Autre",
+};
+
+function prepareLogementData(logement) {
+  const statut = logement?.statut_occupation || "";
+  const label = statut
+    ? STATUT_OCCUPATION_LABELS[statut] + (statut === "autre" && logement.statut_occupation_precision ? ` : ${logement.statut_occupation_precision}` : "")
+    : "";
+  return {
+    logement_numero_batiment_escalier: logement?.numero_batiment_escalier || "",
+    logement_surface: logement?.surface_logement != null ? String(logement.surface_logement) : "",
+    logement_nombre_pieces: logement?.nombre_pieces != null ? String(logement.nombre_pieces) : "",
+    logement_etat_sanitaire: logement?.etat_sanitaire || "",
+    logement_occupants_habituels: logement?.occupants_habituels_details || "",
+    logement_occupants_permanents: logement?.occupants_permanents != null ? String(logement.occupants_permanents) : "",
+    logement_occupants_temporaires: logement?.occupants_temporaires != null ? String(logement.occupants_temporaires) : "",
+    logement_statut_occupation: label,
+    logement_statut_occupation_precision: logement?.statut_occupation_precision || "",
+    logement_case_proprietaire: statut === "proprietaire" ? "X" : "",
+    logement_case_locataire: statut === "locataire" ? "X" : "",
+    logement_case_autre: statut === "autre" ? "X" : "",
+  };
+}
+
+async function prepareUsagerData(usager) {
   const isMale = usager.civilite === "M.";
   const isNeutral = usager.civilite === "Mx";
+  const logement = await logementRepository.findByUsagerId(usager.id);
   return {
     civilite: usager.civilite || "",
     nom: formatNom(usager.nom) || "",
@@ -60,6 +89,7 @@ function prepareUsagerData(usager) {
     code_postal: usager.code_postal || "",
     ville: usager.ville || "",
     pays: usager.pays || "France",
+    ...prepareLogementData(logement),
   };
 }
 
@@ -126,7 +156,7 @@ const attestationService = {
     let mergeData;
 
     if (nbUsagers === 1) {
-      mergeData = prepareUsagerData(usager);
+      mergeData = await prepareUsagerData(usager);
     } else {
       mergeData = {};
       const usagers = [
@@ -135,7 +165,7 @@ const attestationService = {
         ...(usager3 ? [{ data: usager3, key: "usager3" }] : []),
       ];
       for (const { data, key } of usagers) {
-        for (const [field, val] of Object.entries(prepareUsagerData(data))) {
+        for (const [field, val] of Object.entries(await prepareUsagerData(data))) {
           mergeData[`${key}_${field}`] = val;
         }
       }

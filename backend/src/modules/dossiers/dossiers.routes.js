@@ -29,11 +29,13 @@ const dossierService = require("./dossiers.service");
  */
 router.get("/", async (req, res, next) => {
   try {
-    const { statut, type_piece, search, limit, offset } = req.query;
+    const { statut, type_piece, search, sort, order, limit, offset } = req.query;
     const result = await dossierService.list({
       statut,
       type_piece,
       search,
+      sort,
+      order,
       limit: parseInt(limit, 10) || 50,
       offset: parseInt(offset, 10) || 0,
     });

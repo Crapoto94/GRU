@@ -1,4 +1,4 @@
-export const VERSION = "0.3.0";
+export const VERSION = "0.3.1";
 
 export interface ChangelogEntry {
   version: string;
@@ -7,6 +7,19 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG = [
+  {
+    version: "0.3.1",
+    date: "2026-08-27",
+    features: [
+      "Fiche logement par usager : surface, pieces, etat sanitaire, occupants, statut d'occupation (proprietaire/locataire/autre) — reprend tous les champs du formulaire d'attestation d'accueil",
+      "Icone logement dans la liste des usagers, coloree quand renseignee",
+      "Toutes les informations de logement disponibles comme variables de fusion dans les attestations (logement_surface, logement_case_proprietaire...), y compris en multi-usagers",
+      "Documentation des variables de logement ajoutee dans l'aide de creation de template",
+      "Demandes CNI / Passeport : la liste regroupe desormais les pieces par dossier (nombre de personnes, nombre de pieces, repartition des statuts)",
+      "Demandes CNI / Passeport : colonnes triables (usagers, personnes, pieces, statuts, anciennete, date de creation)",
+      "Demandes CNI / Passeport : affichage du nombre de jours d'attente depuis la demande la plus ancienne non encore arrivee",
+    ],
+  },
   {
     version: "0.3.0",
     date: "2026-08-27",

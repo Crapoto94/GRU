@@ -24,6 +24,25 @@ export interface Usager {
   motif_archivage: string | null;
   created_by: string | null;
   attestation_count: number;
+  has_logement: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export type StatutOccupation = "proprietaire" | "locataire" | "autre";
+
+export interface Logement {
+  id: string;
+  usager_id: string;
+  numero_batiment_escalier: string | null;
+  surface_logement: number | null;
+  nombre_pieces: number | null;
+  etat_sanitaire: string | null;
+  occupants_habituels_details: string | null;
+  occupants_permanents: number | null;
+  occupants_temporaires: number | null;
+  statut_occupation: StatutOccupation | null;
+  statut_occupation_precision: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -122,4 +141,19 @@ export interface Dossier {
   updated_at: string;
   pieces: DossierPiece[];
   suivi: DossierSuivi[];
+}
+
+export interface DossierListItem {
+  dossier_id: string;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+  nb_usagers: number;
+  nb_pieces: number;
+  usagers: Array<{ id: string; nom: string; prenom: string }>;
+  nb_demande: number;
+  nb_ajourne: number;
+  nb_arrive: number;
+  nb_recupere: number;
+  date_demande_attente: string | null;
 }

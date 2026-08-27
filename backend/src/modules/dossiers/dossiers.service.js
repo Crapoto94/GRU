@@ -11,7 +11,7 @@ const CANAUX = ["sms", "email", "both"];
 
 const dossierService = {
   async list(params) {
-    return dossierRepository.findPiecesList(params);
+    return dossierRepository.findDossiersList(params);
   },
 
   async getById(id) {

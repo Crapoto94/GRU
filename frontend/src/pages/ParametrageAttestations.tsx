@@ -28,6 +28,21 @@ const VARIABLES_USAGER = [
   { nom: "pays", description: "Pays de l'adresse", exemple: "France" },
 ];
 
+const VARIABLES_LOGEMENT = [
+  { nom: "logement_numero_batiment_escalier", description: "N° de batiment / escalier", exemple: "Bat. B, Esc. 2" },
+  { nom: "logement_surface", description: "Surface du logement en m²", exemple: "67" },
+  { nom: "logement_nombre_pieces", description: "Nombre de pieces du logement", exemple: "3" },
+  { nom: "logement_etat_sanitaire", description: "Etat sanitaire du logement", exemple: "Normal" },
+  { nom: "logement_occupants_habituels", description: "Occupants habituels (age et lien de parente)", exemple: "1 (39 ans, Concubin(e))" },
+  { nom: "logement_occupants_permanents", description: "Nombre d'occupants permanents", exemple: "2" },
+  { nom: "logement_occupants_temporaires", description: "Nombre d'occupants temporaires", exemple: "0" },
+  { nom: "logement_statut_occupation", description: "Statut d'occupation, avec precision si \"Autre\"", exemple: "Propriétaire" },
+  { nom: "logement_statut_occupation_precision", description: "Precision saisie si statut = Autre (vide sinon)", exemple: "" },
+  { nom: "logement_case_proprietaire", description: "\"X\" si proprietaire, vide sinon (pour case a cocher)", exemple: "X" },
+  { nom: "logement_case_locataire", description: "\"X\" si locataire, vide sinon (pour case a cocher)", exemple: "" },
+  { nom: "logement_case_autre", description: "\"X\" si autre statut, vide sinon (pour case a cocher)", exemple: "" },
+];
+
 const VARIABLES_SYSTEME = [
   { nom: "date_du_jour", description: "Date du jour au format francais court", exemple: "25/08/2026" },
   { nom: "date_du_jour_long", description: "Date du jour en toutes lettres", exemple: "25 aout 2026" },
@@ -321,7 +336,31 @@ export default function ParametrageAttestations() {
               </div>
             </div>
             <div>
-              <p className="font-medium text-ville-dark mb-1">3. Variables systeme</p>
+              <p className="font-medium text-ville-dark mb-1">3. Variables de logement (si renseigne sur la fiche usager)</p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs mt-2">
+                  <thead><tr className="border-b border-gray-200">
+                    <th className="text-left py-1 pr-4">Variable</th>
+                    <th className="text-left py-1 pr-4">Description</th>
+                    <th className="text-left py-1">Exemple</th>
+                  </tr></thead>
+                  <tbody>
+                    {VARIABLES_LOGEMENT.map((v) => (
+                      <tr key={v.nom} className="border-b border-gray-50">
+                        <td className="py-1 pr-4 font-mono">{`{{${v.nom}}}`}</td>
+                        <td className="py-1 pr-4">{v.description}</td>
+                        <td className="py-1 text-gray-400">{v.exemple}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-gray-400 text-xs mt-1">
+                Si aucun logement n'est renseigne pour l'usager, ces variables sont vides.
+              </p>
+            </div>
+            <div>
+              <p className="font-medium text-ville-dark mb-1">4. Variables systeme</p>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs mt-2">
                   <thead><tr className="border-b border-gray-200">
@@ -342,7 +381,7 @@ export default function ParametrageAttestations() {
               </div>
             </div>
             <div>
-              <p className="font-medium text-ville-dark mb-1">4. Variables custom (saisies a la generation)</p>
+              <p className="font-medium text-ville-dark mb-1">5. Variables custom (saisies a la generation)</p>
               <p className="text-gray-600 mb-2">
                 Vous pouvez ajouter des variables specifiques au template. Chaque variable a une description qui sera demandee lors de la generation.
                 Dans le document, utilisez {`{{variable1}}`}, {`{{variable2}}`}, etc.
@@ -353,7 +392,7 @@ export default function ParametrageAttestations() {
               </p>
             </div>
             <div>
-              <p className="font-medium text-ville-dark mb-1">5. Multi-usagers</p>
+              <p className="font-medium text-ville-dark mb-1">6. Multi-usagers</p>
               <p className="text-gray-600 mb-1">
                 Pour les templates concernant plusieurs usagers (concubinage, etc.), selectionnez 2 ou 3 usagers.
                 Vous pouvez nommer chaque slot (ex: "Demandeur", "Beneficiaire") a des fins d'affichage uniquement.

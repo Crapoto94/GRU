@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Search, Plus, Archive, RotateCcw, Trash2, ChevronLeft, ChevronRight, FileText, X, Download, UserSearch } from "lucide-react";
+import { Search, Plus, Archive, RotateCcw, Trash2, ChevronLeft, ChevronRight, FileText, X, Download, UserSearch, Home } from "lucide-react";
 import toast from "react-hot-toast";
 import { formatNom, formatPrenom } from "../utils/format";
 import { usagersApi, attestationsApi } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
+import LogementModal from "../components/LogementModal";
 import type { Usager, Attestation } from "../types";
 
 export default function UsagersList() {
@@ -21,6 +22,7 @@ export default function UsagersList() {
 
   const [attestationsModal, setAttestationsModal] = useState<{ usager: Usager; attestations: Attestation[] } | null>(null);
   const [loadingAttestations, setLoadingAttestations] = useState(false);
+  const [logementModalUsager, setLogementModalUsager] = useState<Usager | null>(null);
 
   const [showSynbirdModal, setShowSynbirdModal] = useState(false);
   const [synbirdContact, setSynbirdContact] = useState("");
@@ -213,15 +215,16 @@ export default function UsagersList() {
               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Telephone</th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Ville</th>
               <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase">Attestations</th>
+              <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase">Logement</th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Statut RGPD</th>
               <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {loading ? (
-              <tr><td colSpan={8} className="px-6 py-12 text-center text-gray-500">Chargement...</td></tr>
+              <tr><td colSpan={9} className="px-6 py-12 text-center text-gray-500">Chargement...</td></tr>
             ) : usagers.length === 0 ? (
-              <tr><td colSpan={8} className="px-6 py-12 text-center text-gray-500">Aucun usager trouve</td></tr>
+              <tr><td colSpan={9} className="px-6 py-12 text-center text-gray-500">Aucun usager trouve</td></tr>
             ) : (
               usagers.map((u) => (
                 <motion.tr
@@ -248,6 +251,17 @@ export default function UsagersList() {
                     ) : (
                       <span className="text-gray-300 text-xs">-</span>
                     )}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-center" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={() => setLogementModalUsager(u)}
+                      title={u.has_logement ? "Logement renseigne" : "Renseigner le logement"}
+                      className={`inline-flex items-center justify-center w-7 h-7 rounded-full transition ${
+                        u.has_logement ? "bg-ville-primary/10 text-ville-primary hover:bg-ville-primary/20" : "text-gray-300 hover:bg-gray-100 hover:text-gray-400"
+                      }`}
+                    >
+                      <Home size={14} />
+                    </button>
                   </td>
                   <td className="px-6 py-4 text-sm">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -465,6 +479,14 @@ export default function UsagersList() {
             </div>
           </div>
         </div>
+      )}
+
+      {logementModalUsager && (
+        <LogementModal
+          usager={logementModalUsager}
+          onClose={() => setLogementModalUsager(null)}
+          onSaved={load}
+        />
       )}
     </div>
   );

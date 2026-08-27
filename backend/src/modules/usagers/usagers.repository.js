@@ -29,10 +29,12 @@ const usagerRepository = {
 
   async findAll({ archived = false, search = "", limit = 50, offset = 0 } = {}) {
     const ATTESTATIONS = `"${SCHEMA_NAME}".attestations`;
+    const LOGEMENTS = `"${SCHEMA_NAME}".logements`;
     let query = `SELECT u.*, u.adresse as "Adresse",
       (SELECT COUNT(*)::int FROM ${ATTESTATIONS} a
        WHERE a.usager_id = u.id OR a.usager2_id = u.id OR a.usager3_id = u.id
-      ) as attestation_count
+      ) as attestation_count,
+      EXISTS(SELECT 1 FROM ${LOGEMENTS} l WHERE l.usager_id = u.id) as has_logement
       FROM ${TABLE} u WHERE u.archived = $1`;
     const params = [archived];
     if (search) {

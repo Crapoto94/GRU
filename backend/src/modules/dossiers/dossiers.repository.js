@@ -150,40 +150,66 @@ const dossierRepository = {
     return db.all(`SELECT * FROM ${NOTIFS} WHERE dossier_piece_id = $1 ORDER BY created_at DESC`, [pieceId]);
   },
 
-  async findPiecesList({ statut, type_piece, search, limit = 50, offset = 0 } = {}) {
-    let query = `${PIECE_SELECT} WHERE 1=1`;
+  async findDossiersList({ statut, type_piece, search, sort, order, limit = 50, offset = 0 } = {}) {
     const params = [];
+    let matchWhere = "WHERE 1=1";
     if (statut) {
       params.push(statut);
-      query += ` AND p.statut = $${params.length}`;
+      matchWhere += ` AND p.statut = $${params.length}`;
     }
     if (type_piece) {
       params.push(type_piece);
-      query += ` AND p.type_piece = $${params.length}`;
+      matchWhere += ` AND p.type_piece = $${params.length}`;
     }
     if (search) {
       params.push(`%${search}%`, `%${search}%`);
-      query += ` AND (u.nom ILIKE $${params.length - 1} OR u.prenom ILIKE $${params.length})`;
+      matchWhere += ` AND (u.nom ILIKE $${params.length - 1} OR u.prenom ILIKE $${params.length})`;
     }
-    query += ` ORDER BY p.created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
-    params.push(limit, offset);
-    const rows = await db.all(query, params);
 
-    let countQuery = `SELECT COUNT(*) as total FROM ${PIECES} p JOIN ${USAGERS} u ON p.usager_id = u.id WHERE 1=1`;
-    const countParams = [];
-    if (statut) {
-      countParams.push(statut);
-      countQuery += ` AND p.statut = $${countParams.length}`;
-    }
-    if (type_piece) {
-      countParams.push(type_piece);
-      countQuery += ` AND p.type_piece = $${countParams.length}`;
-    }
-    if (search) {
-      countParams.push(`%${search}%`, `%${search}%`);
-      countQuery += ` AND (u.nom ILIKE $${countParams.length - 1} OR u.prenom ILIKE $${countParams.length})`;
-    }
-    const countResult = await db.get(countQuery, countParams);
+    const matchingCte = `
+      matching_dossiers AS (
+        SELECT DISTINCT p.dossier_id
+        FROM ${PIECES} p
+        JOIN ${USAGERS} u ON p.usager_id = u.id
+        ${matchWhere}
+      )
+    `;
+
+    const SORT_COLUMNS = {
+      usagers: "MIN(u.nom)",
+      personnes: "nb_usagers",
+      pieces: "nb_pieces",
+      statuts: "nb_arrive",
+      cree_le: "d.created_at",
+      attente: "date_demande_attente",
+    };
+    const sortColumn = SORT_COLUMNS[sort] || SORT_COLUMNS.cree_le;
+    const sortDir = order === "asc" ? "ASC" : "DESC";
+    const nullsClause = sort === "attente" ? "NULLS LAST" : "";
+
+    const query = `
+      WITH ${matchingCte}
+      SELECT d.id as dossier_id, d.created_at, d.updated_at, d.created_by,
+        COUNT(DISTINCT p.usager_id)::int as nb_usagers,
+        COUNT(p.id)::int as nb_pieces,
+        jsonb_agg(DISTINCT jsonb_build_object('id', u.id, 'nom', u.nom, 'prenom', u.prenom)) as usagers,
+        COUNT(*) FILTER (WHERE p.statut = 'demande')::int as nb_demande,
+        COUNT(*) FILTER (WHERE p.statut = 'ajourne')::int as nb_ajourne,
+        COUNT(*) FILTER (WHERE p.statut = 'arrive')::int as nb_arrive,
+        COUNT(*) FILTER (WHERE p.statut = 'recupere')::int as nb_recupere,
+        MIN(p.date_demande) FILTER (WHERE p.statut IN ('demande','ajourne')) as date_demande_attente
+      FROM matching_dossiers md
+      JOIN ${DOSSIERS} d ON d.id = md.dossier_id
+      JOIN ${PIECES} p ON p.dossier_id = d.id
+      JOIN ${USAGERS} u ON p.usager_id = u.id
+      GROUP BY d.id, d.created_at, d.updated_at, d.created_by
+      ORDER BY ${sortColumn} ${sortDir} ${nullsClause}
+      LIMIT $${params.length + 1} OFFSET $${params.length + 2}
+    `;
+    const rows = await db.all(query, [...params, limit, offset]);
+
+    const countQuery = `WITH ${matchingCte} SELECT COUNT(*) as total FROM matching_dossiers`;
+    const countResult = await db.get(countQuery, params);
 
     return { rows, total: parseInt(countResult.total, 10) };
   },

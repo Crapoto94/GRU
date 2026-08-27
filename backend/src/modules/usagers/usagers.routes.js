@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const usagerService = require("./usagers.service");
+const logementService = require("../logements/logements.service");
 const { validateAdresse } = require("../../utils/validators");
 const { requireRole } = require("../../middleware/auth");
 
@@ -272,6 +273,84 @@ router.post("/:id/restore", async (req, res, next) => {
       req.ip
     );
     res.json(usager);
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * @openapi
+ * /api/v1/usagers/{id}/logement:
+ *   get:
+ *     tags: [Usagers]
+ *     summary: Obtenir les informations de logement d'un usager
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Informations de logement (ou null si non renseignees)
+ */
+router.get("/:id/logement", async (req, res, next) => {
+  try {
+    const logement = await logementService.getByUsagerId(req.params.id);
+    res.json(logement);
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * @openapi
+ * /api/v1/usagers/{id}/logement:
+ *   put:
+ *     tags: [Usagers]
+ *     summary: Creer ou modifier les informations de logement d'un usager
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Informations de logement sauvegardees
+ */
+router.put("/:id/logement", async (req, res, next) => {
+  try {
+    const logement = await logementService.save(req.params.id, req.body, req.user?.login || "system", req.ip);
+    res.json(logement);
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * @openapi
+ * /api/v1/usagers/{id}/logement:
+ *   delete:
+ *     tags: [Usagers]
+ *     summary: Supprimer les informations de logement d'un usager
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       204:
+ *         description: Supprime
+ */
+router.delete("/:id/logement", async (req, res, next) => {
+  try {
+    await logementService.remove(req.params.id, req.user?.login || "system", req.ip);
+    res.status(204).send();
   } catch (err) {
     next(err);
   }

@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { Usager, Template, Attestation, PaginatedResponse, Dossier, DossierPiece, DossierSuivi, DossierNotificationLog } from "../types";
+import type { Usager, Template, Attestation, PaginatedResponse, Dossier, DossierPiece, DossierSuivi, DossierNotificationLog, DossierListItem, Logement } from "../types";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "",
@@ -26,6 +26,10 @@ export const usagersApi = {
     api.get<{ valid: boolean; suggestions: Array<{ label: string; score: number }> }>("/api/v1/usagers/validate/adresse", { params: { q } }),
   checkDoublon: (params: { nom?: string; date_naissance?: string; telephone?: string; exclude_id?: string }) =>
     api.get<{ nom_date: Usager[]; telephone: Usager[] }>("/api/v1/usagers/check-doublon", { params }),
+  getLogement: (id: string) => api.get<Logement | null>(`/api/v1/usagers/${id}/logement`),
+  saveLogement: (id: string, data: Partial<Logement>) =>
+    api.put<Logement>(`/api/v1/usagers/${id}/logement`, data),
+  removeLogement: (id: string) => api.delete(`/api/v1/usagers/${id}/logement`),
   importSynbird: (contact: string) =>
     api.get<{
       exists: boolean;
@@ -82,8 +86,15 @@ export const usersApi = {
 };
 
 export const dossiersApi = {
-  list: (params?: { statut?: string; type_piece?: string; search?: string; limit?: number; offset?: number }) =>
-    api.get<PaginatedResponse<DossierPiece>>("/api/v1/dossiers", { params }),
+  list: (params?: {
+    statut?: string;
+    type_piece?: string;
+    search?: string;
+    sort?: string;
+    order?: "asc" | "desc";
+    limit?: number;
+    offset?: number;
+  }) => api.get<PaginatedResponse<DossierListItem>>("/api/v1/dossiers", { params }),
   getById: (id: string) => api.get<Dossier>(`/api/v1/dossiers/${id}`),
   create: (data: {
     lignes: Array<{
