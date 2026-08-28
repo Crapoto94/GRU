@@ -3,8 +3,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, FileText } from "lucide-react";
 import toast from "react-hot-toast";
 import { formatNom, formatPrenom } from "../utils/format";
-import { attestationsApi, usagersApi } from "../services/api";
-import type { Usager, Template } from "../types";
+import { attestationsApi, usagersApi, listesApi } from "../services/api";
+import type { Usager, Template, ListeReference } from "../types";
 
 export default function AttestationGenerate() {
   const navigate = useNavigate();
@@ -13,6 +13,7 @@ export default function AttestationGenerate() {
 
   const [usagers, setUsagers] = useState<Usager[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
+  const [listes, setListes] = useState<ListeReference[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState("");
   const [selectedUsager, setSelectedUsager] = useState(preselectedUsager);
   const [selectedUsager2, setSelectedUsager2] = useState("");
@@ -31,6 +32,7 @@ export default function AttestationGenerate() {
 
   useEffect(() => {
     attestationsApi.listTemplates().then((res) => setTemplates(res.data.rows));
+    listesApi.list().then((res) => setListes(res.data)).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -268,7 +270,12 @@ export default function AttestationGenerate() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {activeTemplate.variables.map((varDef, i) => {
                 const key = `variable${i + 1}`;
-                const hasOptions = varDef.allowedValues && varDef.allowedValues.length > 0;
+                const listeOptions =
+                  varDef.listeCle
+                    ? listes.find((l) => l.cle === varDef.listeCle)?.valeurs.map((v) => v.label) || []
+                    : [];
+                const hasOptions = (varDef.allowedValues && varDef.allowedValues.length > 0) || listeOptions.length > 0;
+                const options = listeOptions.length > 0 ? listeOptions : varDef.allowedValues || [];
                 
                 let inputElement;
                 if (hasOptions) {
@@ -284,7 +291,7 @@ export default function AttestationGenerate() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                     >
                       <option value="">Sélectionner</option>
-                      {varDef.allowedValues!.map((val) => (
+                      {options.map((val) => (
                         <option key={val} value={val}>{val}</option>
                       ))}
                     </select>

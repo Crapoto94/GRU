@@ -60,13 +60,29 @@ export interface Template {
   nom: string;
   description: string | null;
   fichier_original: string;
-  variables: Array<{description: string; allowedValues?: string[]}>;
+  variables: Array<{description: string; allowedValues?: string[]; listeCle?: string; listeNom?: string}>;
   nb_usagers: number;
   usager_labels: Record<string, string> | null;
   usage_logement_principal: boolean;
   usage_logement_secondaire: boolean;
   actif: boolean;
   created_at: string;
+}
+
+export interface ListeValeur {
+  id: string;
+  code: string;
+  label: string;
+  ordre: number;
+}
+
+export interface ListeReference {
+  id: string;
+  cle: string;
+  nom: string;
+  valeurs: ListeValeur[];
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Attestation {
@@ -106,6 +122,7 @@ export interface AdaLegacy {
   heberge_usager_id: string | null;
   hebergeant_assure: boolean | null;
   lien_parente_code: number | null;
+  lien_parente_label: string | null;
   ressource_montant: number | null;
   ressource_observations: string | null;
   hebergeant_nom: string | null;

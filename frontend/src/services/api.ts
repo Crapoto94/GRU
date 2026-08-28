@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { Usager, Template, Attestation, PaginatedResponse, Dossier, DossierPiece, DossierSuivi, DossierNotificationLog, DossierListItem, Logement, TypeLogement, ConservationRegle, AdaLegacy } from "../types";
+import type { Usager, Template, Attestation, PaginatedResponse, Dossier, DossierPiece, DossierSuivi, DossierNotificationLog, DossierListItem, Logement, TypeLogement, ConservationRegle, AdaLegacy, ListeReference, ListeValeur } from "../types";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "",
@@ -139,6 +139,20 @@ export const rgpdApi = {
   listConservation: () => api.get<ConservationRegle[]>("/api/v1/rgpd/conservation"),
   updateConservation: (cle: string, data: { conservation_mois: number; description?: string }) =>
     api.put<ConservationRegle>(`/api/v1/rgpd/conservation/${encodeURIComponent(cle)}`, data),
+};
+
+export const listesApi = {
+  list: () => api.get<ListeReference[]>("/api/v1/listes-correspondance"),
+  getByCle: (cle: string) => api.get<ListeReference>(`/api/v1/listes-correspondance/${encodeURIComponent(cle)}`),
+  create: (data: { cle: string; nom: string }) => api.post<ListeReference>("/api/v1/listes-correspondance", data),
+  update: (id: string, data: { nom: string }) => api.put<ListeReference>(`/api/v1/listes-correspondance/${id}`, data),
+  remove: (id: string) => api.delete(`/api/v1/listes-correspondance/${id}`),
+  addValue: (id: string, data: { code: string; label: string }) =>
+    api.post<ListeValeur>(`/api/v1/listes-correspondance/${id}/valeurs`, data),
+  updateValue: (id: string, valueId: string, data: { code: string; label: string; ordre?: number }) =>
+    api.put<ListeValeur>(`/api/v1/listes-correspondance/${id}/valeurs/${valueId}`, data),
+  removeValue: (id: string, valueId: string) =>
+    api.delete(`/api/v1/listes-correspondance/${id}/valeurs/${valueId}`),
 };
 
 export default api;

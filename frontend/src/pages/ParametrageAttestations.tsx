@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import { Upload, FileText, Trash2, ChevronDown, ChevronRight, Info, Pencil, Plus, X, Download } from "lucide-react";
 import toast from "react-hot-toast";
-import { attestationsApi } from "../services/api";
-import type { Template } from "../types";
+import { attestationsApi, listesApi } from "../services/api";
+import type { Template, ListeReference } from "../types";
+
+type VariableDef = { description: string; allowedValues?: string[]; listeCle?: string; listeNom?: string };
 
 const VARIABLES_USAGER = [
   { nom: "civilite", description: "Civilite de l'usager (M., Mme, Mx)", exemple: "M." },
@@ -63,7 +65,7 @@ const VARIABLES_SYSTEME = [
 const NB_USAGERS_OPTIONS = [1, 2, 3];
 const NB_USAGERS_LABELS: Record<number, string> = { 1: "1 usager (ex: Attestation de domicile)", 2: "2 usagers (ex: Attestation de concubinage)", 3: "3 usagers (ex: Attestation familiale)" };
 
-function VariablesEditor({ value, onChange }: { value: Array<{description: string; allowedValues?: string[]}>; onChange: (v: Array<{description: string; allowedValues?: string[]}>) => void }) {
+function VariablesEditor({ value, onChange, listes }: { value: VariableDef[]; onChange: (v: VariableDef[]) => void; listes: ListeReference[] }) {
   const add = () => onChange([...value, {description: "", allowedValues: []}]);
   const remove = (i: number) => onChange(value.filter((_, idx) => idx !== i));
   const updateDesc = (i: number, v: string) => {
@@ -73,13 +75,23 @@ function VariablesEditor({ value, onChange }: { value: Array<{description: strin
   };
   const updateAllowed = (i: number, vals: string) => {
     const next = [...value];
-    next[i] = {...next[i], allowedValues: vals.split(",").map(s => s.trim()).filter(s => s)};
+    next[i] = {...next[i], allowedValues: vals.split(",").map(s => s.trim()).filter(s => s), listeCle: undefined, listeNom: undefined};
+    onChange(next);
+  };
+  const updateListe = (i: number, cle: string) => {
+    const next = [...value];
+    const liste = listes.find((l) => l.cle === cle);
+    if (liste) {
+      next[i] = {...next[i], allowedValues: [], listeCle: liste.cle, listeNom: liste.nom};
+    } else {
+      next[i] = {...next[i], listeCle: undefined, listeNom: undefined};
+    }
     onChange(next);
   };
   return (
     <div className="space-y-2">
       {value.map((varDef, i) => (
-        <div key={i} className="space-y-1">
+        <div key={i} className="space-y-1 border border-gray-100 rounded-lg p-2">
           <div className="flex items-center gap-2">
             <span className="text-xs font-mono text-gray-400 w-20 shrink-0">variable{i + 1}</span>
             <input
@@ -93,13 +105,29 @@ function VariablesEditor({ value, onChange }: { value: Array<{description: strin
               <X size={16} />
             </button>
           </div>
-          <div className="pl-20">
-            <AllowedValuesInput
-              value={varDef.allowedValues?.join(", ") || ""}
-              onBlur={(vals) => updateAllowed(i, vals)}
-              placeholder="Valeurs autorisees separees par des virgules (optionnel) - ex: Oui, Non, Peut-etre"
-            />
-            <p className="text-xs text-gray-400 mt-1">Laissez vide pour un champ texte libre. Si rempli, une liste deroulante apparaitra.</p>
+          <div className="pl-20 space-y-1">
+            <select
+              value={varDef.listeCle || ""}
+              onChange={(e) => updateListe(i, e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-ville-primary focus:border-transparent"
+            >
+              <option value="">Saisie libre (aucune liste)</option>
+              {listes.map((l) => (
+                <option key={l.id} value={l.cle}>{l.nom} ({l.valeurs.length} valeurs)</option>
+              ))}
+            </select>
+            {!varDef.listeCle && (
+              <AllowedValuesInput
+                value={varDef.allowedValues?.join(", ") || ""}
+                onBlur={(vals) => updateAllowed(i, vals)}
+                placeholder="Valeurs autorisees separees par des virgules (optionnel) - ex: Oui, Non, Peut-etre"
+              />
+            )}
+            <p className="text-xs text-gray-400 mt-1">
+              {varDef.listeCle
+                ? `Les valeurs seront proposees depuis la liste "${varDef.listeNom}" en base.`
+                : "Laissez vide pour un champ texte libre. Si rempli, une liste deroulante apparaitra."}
+            </p>
           </div>
         </div>
       ))}
@@ -183,9 +211,10 @@ function LabelsEditor({ nbUsagers, value, onChange }: { nbUsagers: number; value
 
 export default function ParametrageAttestations() {
   const [templates, setTemplates] = useState<Template[]>([]);
+  const [listes, setListes] = useState<ListeReference[]>([]);
   const [uploadNom, setUploadNom] = useState("");
   const [uploadDesc, setUploadDesc] = useState("");
-  const [uploadVars, setUploadVars] = useState<Array<{description: string; allowedValues?: string[]}>>([]);
+  const [uploadVars, setUploadVars] = useState<VariableDef[]>([]);
   const [uploadNbUsagers, setUploadNbUsagers] = useState(1);
   const [uploadLabels, setUploadLabels] = useState<Record<string, string>>({});
   const [uploadLogementPrincipal, setUploadLogementPrincipal] = useState(false);
@@ -197,7 +226,7 @@ export default function ParametrageAttestations() {
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
   const [editNom, setEditNom] = useState("");
   const [editDesc, setEditDesc] = useState("");
-  const [editVars, setEditVars] = useState<Array<{description: string; allowedValues?: string[]}>>([]);
+  const [editVars, setEditVars] = useState<VariableDef[]>([]);
   const [editNbUsagers, setEditNbUsagers] = useState(1);
   const [editLabels, setEditLabels] = useState<Record<string, string>>({});
   const [editLogementPrincipal, setEditLogementPrincipal] = useState(false);
@@ -216,6 +245,7 @@ export default function ParametrageAttestations() {
 
   useEffect(() => {
     loadTemplates();
+    listesApi.list().then((res) => setListes(res.data)).catch(() => {});
   }, []);
 
   const handleUpload = async (e: React.FormEvent) => {
@@ -234,7 +264,7 @@ export default function ParametrageAttestations() {
     formData.append("usage_logement_secondaire", String(uploadLogementSecondaire));
     const varsToSend = uploadVars
       .filter((v) => v.description.trim())
-      .map(v => ({description: v.description, allowedValues: v.allowedValues || []}));
+      .map(v => ({description: v.description, allowedValues: v.allowedValues || [], listeCle: v.listeCle, listeNom: v.listeNom}));
     if (varsToSend.length > 0) {
       formData.append("variables", JSON.stringify(varsToSend));
     }
@@ -301,8 +331,8 @@ export default function ParametrageAttestations() {
         // Old format: string[] - cast to unknown first to satisfy TypeScript
         setEditVars((t.variables as unknown as string[]).map((v) => ({description: v, allowedValues: []})));
       } else {
-        // New format: Array<{description, allowedValues}>
-        setEditVars(t.variables as Array<{description: string; allowedValues?: string[]}>);
+        // New format: Array<{description, allowedValues?, listeCle?, listeNom?}>
+        setEditVars(t.variables as VariableDef[]);
       }
     } else {
       setEditVars([]);
@@ -328,7 +358,7 @@ export default function ParametrageAttestations() {
     formData.append("usage_logement_principal", String(editLogementPrincipal));
     formData.append("usage_logement_secondaire", String(editLogementSecondaire));
     // Send full variable objects with allowedValues
-    const varsToSend = editVars.map(v => ({description: v.description, allowedValues: v.allowedValues || []}));
+    const varsToSend = editVars.map(v => ({description: v.description, allowedValues: v.allowedValues || [], listeCle: v.listeCle, listeNom: v.listeNom}));
     formData.append("variables", JSON.stringify(varsToSend));
     const labels = Object.fromEntries(Object.entries(editLabels).filter(([, v]) => v.trim()));
     formData.append("usager_labels", JSON.stringify(labels));
@@ -550,7 +580,7 @@ export default function ParametrageAttestations() {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Variables supplementaires (optionnel)
             </label>
-            <VariablesEditor value={uploadVars} onChange={setUploadVars} />
+            <VariablesEditor value={uploadVars} onChange={setUploadVars} listes={listes} />
             <p className="text-xs text-gray-400 mt-1">
               Decrivez chaque variable. Elle sera accessible dans le document sous la forme {`{{variable1}}`}, {`{{variable2}}`}, etc.
               A la generation, un champ de saisie sera affiche avec la description comme intitule.
@@ -677,7 +707,7 @@ export default function ParametrageAttestations() {
               />
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Variables supplementaires</label>
-                <VariablesEditor value={editVars} onChange={setEditVars} />
+                <VariablesEditor value={editVars} onChange={setEditVars} listes={listes} />
                 <p className="text-xs text-gray-400 mt-1">
                   Chaque description correspond a {`{{variable1}}`}, {`{{variable2}}`}, etc. dans le document.
                 </p>

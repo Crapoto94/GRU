@@ -74,7 +74,11 @@ export default function AdaLegacyPreviewModal({ ada, loading, onClose }: Props) 
                   <div className="font-medium">{formatCiviliteNomPrenom(ada, "heberge")}</div>
                   <div className="text-xs text-gray-500">Legacy #{ada.heberge_legacy_id ?? "-"}</div>
                 </div>
-                <div><span className="text-gray-500">Lien de parenté (code) :</span> {ada.lien_parente_code ?? "-"}</div>
+                <div>
+                  <span className="text-gray-500">Lien de parenté :</span>
+                  <div className="font-medium">{ada.lien_parente_label || ada.lien_parente_code || "-"}</div>
+                  {ada.lien_parente_label && <div className="text-xs text-gray-500">code {ada.lien_parente_code ?? "-"}</div>}
+                </div>
                 <div><span className="text-gray-500">Ressources (€/mois) :</span> {ada.ressource_montant ?? "-"}</div>
               </div>
             </div>

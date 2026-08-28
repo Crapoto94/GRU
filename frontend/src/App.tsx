@@ -12,6 +12,7 @@ import AttestationsList from "./pages/AttestationsList";
 import AttestationGenerate from "./pages/AttestationGenerate";
 import AdasList from "./pages/AdasList";
 import ParametrageAttestations from "./pages/ParametrageAttestations";
+import ListesCorrespondance from "./pages/ListesCorrespondance";
 import ParametrageDatabase from "./pages/ParametrageDatabase";
 import ParametrageApiVille from "./pages/ParametrageApiVille";
 import ParametrageSynbird from "./pages/ParametrageSynbird";
@@ -74,6 +75,7 @@ export default function App() {
                   <Route path="/dossiers/:id" element={<DossierDetail />} />
                   <Route path="/rgpd" element={<RgpdRoute><RgpdPage /></RgpdRoute>} />
                   <Route path="/parametrage/attestations" element={<ParametrageAttestations />} />
+                  <Route path="/parametrage/listes-correspondance" element={<ListesCorrespondance />} />
                   <Route path="/parametrage/base-de-donnees" element={<ParametrageDatabase />} />
                   <Route path="/parametrage/api-ville" element={<ParametrageApiVille />} />
                   <Route path="/parametrage/synbird" element={<ParametrageSynbird />} />

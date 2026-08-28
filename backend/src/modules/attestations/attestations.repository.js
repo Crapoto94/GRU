@@ -65,7 +65,7 @@ const attestationRepository = {
       OR coalesce(u3.nom,'') ILIKE $${p} OR coalesce(u3.prenom,'') ILIKE $${p}
       OR coalesce(a.titre,'') ILIKE $${p}
     )`;
-    const whereParts = ["1=1"];
+    const whereParts = ["1=1", "a.statut <> 'import_alto'"];
     const params = [];
     if (search) {
       params.push(`%${search}%`);
@@ -181,13 +181,15 @@ const attestationRepository = {
     const where = whereParts.length ? `WHERE ${whereParts.join(" AND ")}` : "";
     const query = `SELECT a.legacy_id_demande, a.no_cerfa, a.no_piece, a.date_deb_valid, a.date_fin_valid,
         a.hebergeant_legacy_id, a.heberge_legacy_id, a.hebergeant_usager_id, a.heberge_usager_id,
-        a.hebergeant_assure, a.lien_parente_code, a.ressource_montant, a.created_at,
+        a.hebergeant_assure, a.lien_parente_code, lrv.label AS lien_parente_label, a.ressource_montant, a.created_at,
         hg.nom AS hebergeant_nom, hg.prenom AS hebergeant_prenom,
         hb.nom AS heberge_nom, hb.prenom AS heberge_prenom,
         att.id AS attestation_id, att.titre AS attestation_titre
       FROM ${TABLE_ADA} a
       LEFT JOIN "${SCHEMA_NAME}".usagers hg ON a.hebergeant_usager_id = hg.id
       LEFT JOIN "${SCHEMA_NAME}".usagers hb ON a.heberge_usager_id = hb.id
+      LEFT JOIN "${SCHEMA_NAME}".listes_reference lr ON lr.cle = 'lien_parente'
+      LEFT JOIN "${SCHEMA_NAME}".listes_reference_valeurs lrv ON lrv.liste_id = lr.id AND lrv.code = a.lien_parente_code::text
       LEFT JOIN ${TABLE_ATTESTATIONS} att
         ON att.statut = 'import_alto'
        AND att.contenu_genere->>'Numéro demande legacy' = a.legacy_id_demande::text
@@ -209,10 +211,13 @@ const attestationRepository = {
   async findAdaByLegacyId(legacyId) {
     return db.get(
       `SELECT a.*,
+        lr2.label AS lien_parente_label,
         hg.nom AS hebergeant_nom, hg.prenom AS hebergeant_prenom, hg.civilite AS hebergeant_civilite,
         hb.nom AS heberge_nom, hb.prenom AS heberge_prenom, hb.civilite AS heberge_civilite,
         att.id AS attestation_id, att.titre AS attestation_titre
        FROM "${SCHEMA_NAME}".attestations_ada a
+       LEFT JOIN "${SCHEMA_NAME}".listes_reference lr2 ON lr2.cle = 'lien_parente'
+       LEFT JOIN "${SCHEMA_NAME}".listes_reference_valeurs lrv2 ON lrv2.liste_id = lr2.id AND lrv2.code = a.lien_parente_code::text
        LEFT JOIN "${SCHEMA_NAME}".usagers hg ON a.hebergeant_usager_id = hg.id
        LEFT JOIN "${SCHEMA_NAME}".usagers hb ON a.heberge_usager_id = hb.id
        LEFT JOIN ${TABLE_ATTESTATIONS} att

@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { Users, FileText, Layout, Settings, LogOut, Database, Shield, Globe, ScrollText, Info, HelpCircle, Calendar, IdCard, MessageSquare, ShieldCheck, FileSearch } from "lucide-react";
+import { Users, FileText, Layout, Settings, LogOut, Database, Shield, Globe, ScrollText, Info, HelpCircle, Calendar, IdCard, MessageSquare, ShieldCheck, FileSearch, ListChecks } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { getVersion, formatVersion } from "../services/version";
@@ -87,6 +87,10 @@ export default function Sidebar() {
               <NavLink to="/parametrage/attestations" className={subLinkClass}>
                 <FileText size={14} />
                 Templates attestations
+              </NavLink>
+              <NavLink to="/parametrage/listes-correspondance" className={subLinkClass}>
+                <ListChecks size={14} />
+                Listes de correspondance
               </NavLink>
               <NavLink to="/parametrage/base-de-donnees" className={subLinkClass}>
                 <Database size={14} />

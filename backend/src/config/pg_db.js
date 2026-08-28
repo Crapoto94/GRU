@@ -297,6 +297,74 @@ async function setupDb() {
     await client.query(`CREATE INDEX IF NOT EXISTS idx_attestations_ada_hebergeant ON "${SCHEMA_NAME}".attestations_ada(hebergeant_usager_id)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_attestations_ada_heberge ON "${SCHEMA_NAME}".attestations_ada(heberge_usager_id)`);
 
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS "${SCHEMA_NAME}".listes_reference (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        cle VARCHAR(100) NOT NULL UNIQUE,
+        nom VARCHAR(255) NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS "${SCHEMA_NAME}".listes_reference_valeurs (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        liste_id UUID NOT NULL REFERENCES "${SCHEMA_NAME}".listes_reference(id) ON DELETE CASCADE,
+        code VARCHAR(100) NOT NULL,
+        label VARCHAR(255) NOT NULL,
+        ordre INTEGER NOT NULL DEFAULT 0,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(liste_id, code)
+      )
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_listes_reference_valeurs_liste ON "${SCHEMA_NAME}".listes_reference_valeurs(liste_id)`);
+
+    await client.query(`
+      DO $$
+      DECLARE
+        lid UUID;
+      BEGIN
+        SELECT id INTO lid FROM "${SCHEMA_NAME}".listes_reference WHERE cle = 'lien_parente' LIMIT 1;
+        IF lid IS NULL THEN
+          INSERT INTO "${SCHEMA_NAME}".listes_reference (cle, nom)
+          VALUES ('lien_parente', 'Lien de parenté')
+          RETURNING id INTO lid;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM "${SCHEMA_NAME}".listes_reference_valeurs WHERE liste_id = lid) THEN
+          INSERT INTO "${SCHEMA_NAME}".listes_reference_valeurs (liste_id, code, label, ordre)
+          VALUES
+            (lid, '1', 'Grand Mère', 1),
+            (lid, '2', 'Grand Père', 2),
+            (lid, '3', 'Mère', 3),
+            (lid, '4', 'Père', 4),
+            (lid, '5', 'Belle-mère', 5),
+            (lid, '6', 'Beau-père', 6),
+            (lid, '7', 'Frère', 7),
+            (lid, '8', 'Soeur', 8),
+            (lid, '9', 'Beau-frère', 9),
+            (lid, '10', 'Belle-soeur', 10),
+            (lid, '11', 'Fils', 11),
+            (lid, '12', 'Fille', 12),
+            (lid, '13', 'Gendre', 13),
+            (lid, '14', 'Belle-fille', 14),
+            (lid, '15', 'Petit-fils', 15),
+            (lid, '16', 'Petite-fille', 16),
+            (lid, '17', 'Cousin', 17),
+            (lid, '18', 'Cousine', 18),
+            (lid, '19', 'Oncle', 19),
+            (lid, '20', 'Tante', 20),
+            (lid, '21', 'Neveu', 21),
+            (lid, '22', 'Nièce', 22),
+            (lid, '23', 'Epouse', 23),
+            (lid, '24', 'Epoux', 24),
+            (lid, '25', 'Concubin(e)', 25),
+            (lid, '27', 'Ami(e)', 26),
+            (lid, '28', 'Beau-fils', 27);
+        END IF;
+      END $$;
+    `);
+
     const seedRgpd = [
       `INSERT INTO "${SCHEMA_NAME}".rgpd_conservation (cle, libelle, categorie, conservation_mois, description)
        SELECT 'attestation_' || id, nom || ' (template attestation)', 'attestations', 36, description

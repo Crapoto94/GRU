@@ -334,6 +334,17 @@ async function importWorkbooks() {
       `SELECT id, civilite, nom, prenom FROM "${SCHEMA_NAME}".usagers`
     );
     const usagerNames = new Map(namesRes.rows.map((u) => [u.id, u]));
+    const lienParenteLabels = new Map();
+    const lpHdr = await client.query(
+      `SELECT id FROM "${SCHEMA_NAME}".listes_reference WHERE cle = 'lien_parente' LIMIT 1`
+    );
+    if (lpHdr.rows[0]) {
+      const lv = await client.query(
+        `SELECT code, label FROM "${SCHEMA_NAME}".listes_reference_valeurs WHERE liste_id = $1`,
+        [lpHdr.rows[0].id]
+      );
+      for (const r of lv.rows) lienParenteLabels.set(r.code, r.label);
+    }
     let attestationsImported = 0;
     for (const r of adaRows) {
       const hebergeantEnreg = toInt(r.ID_HEBERGEANT);
@@ -398,7 +409,7 @@ async function importWorkbooks() {
         const contenu = {
           Du: frDate(parseDate(r.DATE_DEB_VALID)) || "",
           Au: frDate(parseDate(r.DATE_FIN_VALID)) || "",
-          "Lien de parenté": cleanText(r.ID_LIEN_PARENTE) || "",
+          "Lien de parenté": lienParenteLabels.get(cleanText(r.ID_LIEN_PARENTE)) || cleanText(r.ID_LIEN_PARENTE) || "",
           "N° de pièce demandeur": cleanText(r.NO_PIECE) || "",
           "Numéro CERFA": cleanText(r.NO_CERFA) || "",
           "Ressources (€/mois)": ressourceMontant || "",
