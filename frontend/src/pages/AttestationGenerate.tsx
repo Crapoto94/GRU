@@ -11,7 +11,9 @@ export default function AttestationGenerate() {
   const [searchParams] = useSearchParams();
   const preselectedUsager = searchParams.get("usager") || "";
 
-  const [usagers, setUsagers] = useState<Usager[]>([]);
+  const [usagers1, setUsagers1] = useState<Usager[]>([]);
+  const [usagers2, setUsagers2] = useState<Usager[]>([]);
+  const [usagers3, setUsagers3] = useState<Usager[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [listes, setListes] = useState<ListeReference[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState("");
@@ -38,11 +40,29 @@ export default function AttestationGenerate() {
   useEffect(() => {
     const timer = setTimeout(() => {
       usagersApi.list({ search: searchUsager, limit: 20 }).then((res) => {
-        setUsagers(res.data.rows);
+        setUsagers1(res.data.rows);
       });
     }, 300);
     return () => clearTimeout(timer);
   }, [searchUsager]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      usagersApi.list({ search: searchUsager2, limit: 20 }).then((res) => {
+        setUsagers2(res.data.rows);
+      });
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchUsager2]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      usagersApi.list({ search: searchUsager3, limit: 20 }).then((res) => {
+        setUsagers3(res.data.rows);
+      });
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchUsager3]);
 
   useEffect(() => {
     if (selectedTemplate) {
@@ -118,9 +138,10 @@ export default function AttestationGenerate() {
     selectedId: string,
     onSelect: (id: string) => void,
     search: string,
-    onSearchChange: (v: string) => void
+    onSearchChange: (v: string) => void,
+    usagersList: Usager[]
   ) => {
-    const selected = usagers.find((u) => u.id === selectedId);
+    const selected = usagersList.find((u) => u.id === selectedId);
     return (
       <section>
         <h2 className="text-lg font-semibold text-ville-primary mb-4">{label}</h2>
@@ -132,10 +153,10 @@ export default function AttestationGenerate() {
           className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm mb-3"
         />
         <div className="max-h-60 overflow-y-auto border border-gray-200 rounded-lg">
-          {usagers.length === 0 ? (
+          {usagersList.length === 0 ? (
             <p className="px-4 py-6 text-center text-sm text-gray-500">Aucun usager trouve</p>
           ) : (
-            usagers.map((u) => (
+            usagersList.map((u) => (
               <button
                 key={u.id}
                 type="button"
@@ -212,21 +233,24 @@ export default function AttestationGenerate() {
               selectedUsager,
               setSelectedUsager,
               searchUsager,
-              setSearchUsager
+              setSearchUsager,
+              usagers1
             )}
             {nbUsagers >= 2 && renderUsagerSelector(
               `Selection de l'usager : ${getLabel("2")}`,
               selectedUsager2,
               setSelectedUsager2,
               searchUsager2,
-              setSearchUsager2
+              setSearchUsager2,
+              usagers2
             )}
             {nbUsagers >= 3 && renderUsagerSelector(
               `Selection de l'usager : ${getLabel("3")}`,
               selectedUsager3,
               setSelectedUsager3,
               searchUsager3,
-              setSearchUsager3
+              setSearchUsager3,
+              usagers3
             )}
           </>
         )}
