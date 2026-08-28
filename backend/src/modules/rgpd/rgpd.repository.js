@@ -74,6 +74,68 @@ const rgpdRepository = {
   async remove(cle) {
     await db.run(`DELETE FROM ${TABLE} WHERE cle = $1`, [cle]);
   },
+
+  async findUsagersToArchive() {
+    // Get the conservation rule for usager data (infos_usager)
+    const rule = await db.get(
+      `SELECT conservation_mois FROM ${TABLE} WHERE cle = 'infos_usager' AND actif`
+    );
+    const retentionMonths = rule?.conservation_mois ?? 60;
+
+    // Find usagers whose latest event across all tables is older than retention period
+    // and who are not already archived
+    return db.all(
+      `WITH latest_events AS (
+        SELECT u.id, u.nom, u.prenom, u.email, u.telephone, u.mobile, u.ville,
+               GREATEST(
+                 COALESCE((
+                   SELECT MAX(a.date_generation)
+                   FROM "${SCHEMA_NAME}".attestations a
+                   WHERE a.usager_id = u.id
+                      OR a.usager2_id = u.id
+                      OR a.usager3_id = u.id
+                 ), '1970-01-01'::timestamptz),
+                 COALESCE((
+                   SELECT MAX(dp.date_demande)::timestamptz
+                   FROM "${SCHEMA_NAME}".dossier_pieces dp
+                   WHERE dp.usager_id = u.id
+                 ), '1970-01-01'::timestamptz),
+                 COALESCE((
+                   SELECT MAX(uh.date_enreg)::timestamptz
+                   FROM "${SCHEMA_NAME}".usagers_historique uh
+                   WHERE uh.usager_id = u.id
+                 ), '1970-01-01'::timestamptz),
+                 COALESCE(u.updated_at, '1970-01-01'::timestamptz)
+               ) AS dernier_evenement
+        FROM "${SCHEMA_NAME}".usagers u
+        WHERE u.archived = FALSE
+      )
+      SELECT id, nom, prenom, email, telephone, mobile, ville,
+             dernier_evenement,
+             EXTRACT(EPOCH FROM (NOW() - dernier_evenement)) / 86400 AS jours_ecoules,
+             ${retentionMonths} AS duree_conservation_mois
+      FROM latest_events
+      WHERE dernier_evenement < NOW() - INTERVAL '${retentionMonths} months'
+      ORDER BY dernier_evenement ASC`
+    );
+  },
+
+  async archiveUsagers(usagerIds, user, motif) {
+    if (!usagerIds.length) return { count: 0 };
+    const placeholders = usagerIds.map((_, i) => `$${i + 1}`).join(",");
+    const params = [...usagerIds, user, motif, new Date().toISOString()];
+    const result = await db.run(
+      `UPDATE "${SCHEMA_NAME}".usagers
+       SET archived = TRUE,
+           date_archivage = $${params.length},
+           motif_archivage = $${params.length - 1},
+           updated_at = NOW()
+       WHERE id IN (${placeholders})
+         AND archived = FALSE`,
+      params
+    );
+    return { count: result.changes };
+  },
 };
 
 module.exports = rgpdRepository;

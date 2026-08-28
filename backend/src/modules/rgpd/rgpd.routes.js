@@ -101,4 +101,68 @@ router.put(
   }
 );
 
+/**
+ * @openapi
+ * /api/v1/rgpd/alertes:
+ *   get:
+ *     tags: [RGPD]
+ *     summary: Liste des usagers a archiver (dernier evenement > duree conservation)
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Liste des usagers concernes
+ */
+router.get(
+  "/alertes",
+  requireRole("administrateur", "dpd"),
+  async (_req, res, next) => {
+    try {
+      const rows = await rgpdService.getUsagersToArchive();
+      res.json(rows);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/**
+ * @openapi
+ * /api/v1/rgpd/archiver:
+ *   post:
+ *     tags: [RGPD]
+ *     summary: Archiver une selection d'usagers
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [usager_ids]
+ *             properties:
+ *               usager_ids:
+ *                 type: array
+ *                 items: { type: string, format: uuid }
+ *               motif:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Resultat de l'archivage
+ */
+router.post(
+  "/archiver",
+  requireRole("administrateur", "dpd"),
+  async (req, res, next) => {
+    try {
+      const { usager_ids, motif } = req.body;
+      const result = await rgpdService.archiveUsagers(usager_ids, req.user.login || req.user.sub, req.ip, motif);
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
 module.exports = router;

@@ -61,6 +61,19 @@ const rgpdService = {
     await logAcces(user, "UPDATE_RGPD_CONSERVATION", "rgpd_conservation", null, { cle, conservation_mois: conservationMois }, ip);
     return row;
   },
+
+  async getUsagersToArchive() {
+    return rgpdRepository.findUsagersToArchive();
+  },
+
+  async archiveUsagers(usagerIds, user, ip, motif = "Archivage RGPD - delai de conservation expire") {
+    if (!Array.isArray(usagerIds) || !usagerIds.length) {
+      throw Object.assign(new Error("Liste d'usagers requise"), { status: 400 });
+    }
+    const result = await rgpdRepository.archiveUsagers(usagerIds, user, motif);
+    await logAcces(user, "ARCHIVE_USAGERS_RGPD", "usagers", null, { count: result.count, usagerIds }, ip);
+    return result;
+  },
 };
 
 module.exports = rgpdService;

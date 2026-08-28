@@ -165,6 +165,18 @@ async function setupDb() {
       )
     `);
     await client.query(`
+      CREATE TABLE IF NOT EXISTS "${SCHEMA_NAME}".dossier_piece_etapes (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        dossier_piece_id UUID NOT NULL REFERENCES "${SCHEMA_NAME}".dossier_pieces(id) ON DELETE CASCADE,
+        ordre INTEGER NOT NULL,
+        date_etape TIMESTAMPTZ NOT NULL,
+        libelle VARCHAR(255) NOT NULL,
+        statut_equivalent VARCHAR(20),
+        code_legacy VARCHAR(50),
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await client.query(`
       CREATE TABLE IF NOT EXISTS "${SCHEMA_NAME}".dossier_notifications (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         dossier_piece_id UUID NOT NULL REFERENCES "${SCHEMA_NAME}".dossier_pieces(id) ON DELETE CASCADE,
@@ -397,6 +409,7 @@ async function setupDb() {
       `ALTER TABLE "${SCHEMA_NAME}".logements ADD COLUMN IF NOT EXISTS pays VARCHAR(100) DEFAULT 'France'`,
       `ALTER TABLE "${SCHEMA_NAME}".templates ADD COLUMN IF NOT EXISTS usage_logement_principal BOOLEAN NOT NULL DEFAULT FALSE`,
       `ALTER TABLE "${SCHEMA_NAME}".templates ADD COLUMN IF NOT EXISTS usage_logement_secondaire BOOLEAN NOT NULL DEFAULT FALSE`,
+      `ALTER TABLE "${SCHEMA_NAME}".dossier_pieces ADD COLUMN IF NOT EXISTS legacy_id_demande INTEGER`,
     ];
     for (const sql of alterCols) await client.query(sql);
 
@@ -438,7 +451,9 @@ async function setupDb() {
       CREATE INDEX IF NOT EXISTS idx_dossier_pieces_dossier ON "${SCHEMA_NAME}".dossier_pieces(dossier_id);
       CREATE INDEX IF NOT EXISTS idx_dossier_pieces_usager ON "${SCHEMA_NAME}".dossier_pieces(usager_id);
       CREATE INDEX IF NOT EXISTS idx_dossier_pieces_statut ON "${SCHEMA_NAME}".dossier_pieces(statut);
+      CREATE INDEX IF NOT EXISTS idx_dossier_pieces_legacy_id_demande ON "${SCHEMA_NAME}".dossier_pieces(legacy_id_demande);
       CREATE INDEX IF NOT EXISTS idx_dossier_suivi_dossier ON "${SCHEMA_NAME}".dossier_suivi(dossier_id);
+      CREATE INDEX IF NOT EXISTS idx_dossier_piece_etapes_piece ON "${SCHEMA_NAME}".dossier_piece_etapes(dossier_piece_id);
     `);
 
     console.log(`[DB] Schema "${SCHEMA_NAME}" initialized`);

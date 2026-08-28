@@ -170,6 +170,7 @@ async function importCniPas() {
         date_recuperation: date_recuperation ? `${date_recuperation}T00:00:00Z` : null,
         observation: cleanText(row.OBSERV_INT),
         observation_date: parseDate(row.DATE_ETAPE) || parseDate(row.DATE_DEPOT),
+        legacy_id_demande: toInt(row.ID_DEMANDE),
       };
     }
 
@@ -275,7 +276,7 @@ async function importCniPas() {
         for (const p of d.pieces) {
           const base = pParams.length;
           pValuesSql.push(
-            `($${base + 1},$${base + 2},$${base + 3},$${base + 4},$${base + 5},$${base + 6},$${base + 7},$${base + 8})`
+            `($${base + 1},$${base + 2},$${base + 3},$${base + 4},$${base + 5},$${base + 6},$${base + 7},$${base + 8},$${base + 9})`
           );
           pParams.push(
             d.dossier_id,
@@ -285,14 +286,15 @@ async function importCniPas() {
             p.statut,
             d.destinataire_usager_id,
             p.date_arrivee,
-            p.date_recuperation
+            p.date_recuperation,
+            p.legacy_id_demande
           );
         }
       }
       if (pValuesSql.length) {
         await client.query(
           `INSERT INTO "${SCHEMA_NAME}".dossier_pieces
-             (dossier_id, usager_id, type_piece, date_demande, statut, destinataire_usager_id, date_arrivee, date_recuperation)
+             (dossier_id, usager_id, type_piece, date_demande, statut, destinataire_usager_id, date_arrivee, date_recuperation, legacy_id_demande)
            VALUES ${pValuesSql.join(",")}`,
           pParams
         );
@@ -325,7 +327,7 @@ async function importCniPas() {
       }
 
       dossierCount += batch.length;
-      pieceCount += pParams.length / 8;
+      pieceCount += pParams.length / 9;
       suiviCount += batch.length;
       console.log(`[IMPORT CNI/PAS] ... ${dossierCount}/${dossiersToInsert.length} dossiers (${pieceCount} pieces)`);
     }
