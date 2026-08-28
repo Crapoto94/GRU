@@ -303,6 +303,7 @@ export default function UsersPage() {
                 <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
                   <option value="utilisateur">Utilisateur</option>
                   <option value="administrateur">Administrateur</option>
+                  <option value="dpd">DPD (Delegue Protection des Donnees)</option>
                 </select>
               </div>
               <div>
@@ -375,10 +376,10 @@ export default function UsersPage() {
                 <td className="px-4 py-3 text-sm text-gray-600">{u.direction || "-"}</td>
                 <td className="px-4 py-3 text-sm">
                   <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-                    u.role === "administrateur" ? "bg-purple-100 text-purple-700" : "bg-gray-100 text-gray-600"
+                    u.role === "administrateur" ? "bg-purple-100 text-purple-700" : u.role === "dpd" ? "bg-teal-100 text-teal-700" : "bg-gray-100 text-gray-600"
                   }`}>
                     {u.role === "administrateur" ? <Shield size={12} /> : <UserCheck size={12} />}
-                    {u.role}
+                    {u.role === "administrateur" ? "administrateur" : u.role === "dpd" ? "DPD" : u.role}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-sm">

@@ -10,6 +10,7 @@ import UsagersList from "./pages/UsagersList";
 import UsagerForm from "./pages/UsagerForm";
 import AttestationsList from "./pages/AttestationsList";
 import AttestationGenerate from "./pages/AttestationGenerate";
+import AdasList from "./pages/AdasList";
 import ParametrageAttestations from "./pages/ParametrageAttestations";
 import ParametrageDatabase from "./pages/ParametrageDatabase";
 import ParametrageApiVille from "./pages/ParametrageApiVille";
@@ -20,10 +21,18 @@ import DossierForm from "./pages/DossierForm";
 import DossierDetail from "./pages/DossierDetail";
 import UsersPage from "./pages/UsersPage";
 import LogsPage from "./pages/LogsPage";
+import RgpdPage from "./pages/RgpdPage";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { token } = useAuth();
   if (!token) return <Navigate to="/login" replace />;
+  return <>{children}</>;
+}
+
+function RgpdRoute({ children }: { children: React.ReactNode }) {
+  const { token, canAccessRgpd } = useAuth();
+  if (!token) return <Navigate to="/login" replace />;
+  if (!canAccessRgpd) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
 
@@ -58,10 +67,12 @@ export default function App() {
                   <Route path="/usagers/nouveau" element={<UsagerForm />} />
                   <Route path="/usagers/:id" element={<UsagerForm />} />
                   <Route path="/attestations" element={<AttestationsList />} />
+                  <Route path="/attestations/ada" element={<AdasList />} />
                   <Route path="/attestations/nouvelle" element={<AttestationGenerate />} />
                   <Route path="/dossiers" element={<DossiersList />} />
                   <Route path="/dossiers/nouveau" element={<DossierForm />} />
                   <Route path="/dossiers/:id" element={<DossierDetail />} />
+                  <Route path="/rgpd" element={<RgpdRoute><RgpdPage /></RgpdRoute>} />
                   <Route path="/parametrage/attestations" element={<ParametrageAttestations />} />
                   <Route path="/parametrage/base-de-donnees" element={<ParametrageDatabase />} />
                   <Route path="/parametrage/api-ville" element={<ParametrageApiVille />} />

@@ -9,3 +9,6 @@ backend/uploads/documents/*
 backend/uploads/templates/*
 !backend/uploads/templates/.gitkeep
 frontend/dist/
+
+xls/
+ps/

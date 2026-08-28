@@ -51,37 +51,47 @@ const attestationRepository = {
     return db.run(`DELETE FROM ${TABLE_TEMPLATES} WHERE id = $1`, [id]);
   },
 
-  async findAll({ statut, usager_id, limit = 50, offset = 0 } = {}) {
-    let query = `SELECT a.*, u.nom as usager_nom, u.prenom as usager_prenom, u2.nom as usager2_nom, u2.prenom as usager2_prenom, u3.nom as usager3_nom, u3.prenom as usager3_prenom, t.nom as template_nom
+  async findAll({ statut, usager_id, search, limit = 50, offset = 0 } = {}) {
+    const FROM = `
       FROM ${TABLE_ATTESTATIONS} a
       LEFT JOIN "${SCHEMA_NAME}".usagers u ON a.usager_id = u.id
       LEFT JOIN "${SCHEMA_NAME}".usagers u2 ON a.usager2_id = u2.id
       LEFT JOIN "${SCHEMA_NAME}".usagers u3 ON a.usager3_id = u3.id
-      LEFT JOIN ${TABLE_TEMPLATES} t ON a.template_id = t.id
-      WHERE 1=1`;
+      LEFT JOIN ${TABLE_TEMPLATES} t ON a.template_id = t.id`;
+    const searchClause = (p) => `(
+      coalesce(u.nom,'') ILIKE $${p} OR coalesce(u.prenom,'') ILIKE $${p}
+      OR coalesce(u.telephone,'') ILIKE $${p} OR coalesce(u.mobile,'') ILIKE $${p} OR coalesce(u.email,'') ILIKE $${p}
+      OR coalesce(u2.nom,'') ILIKE $${p} OR coalesce(u2.prenom,'') ILIKE $${p}
+      OR coalesce(u3.nom,'') ILIKE $${p} OR coalesce(u3.prenom,'') ILIKE $${p}
+      OR coalesce(a.titre,'') ILIKE $${p}
+    )`;
+    const whereParts = ["1=1"];
     const params = [];
+    if (search) {
+      params.push(`%${search}%`);
+      whereParts.push(searchClause(params.length));
+    }
     if (statut) {
       params.push(statut);
-      query += ` AND a.statut = $${params.length}`;
+      whereParts.push(`a.statut = $${params.length}`);
     }
     if (usager_id) {
       params.push(usager_id);
-      query += ` AND (a.usager_id = $${params.length} OR a.usager2_id = $${params.length} OR a.usager3_id = $${params.length})`;
+      whereParts.push(`(a.usager_id = $${params.length} OR a.usager2_id = $${params.length} OR a.usager3_id = $${params.length})`);
     }
-    query += ` ORDER BY a.created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
-    params.push(limit, offset);
-    const rows = await db.all(query, params);
-    const countParams = [];
-    let countQuery = `SELECT COUNT(*) as total FROM ${TABLE_ATTESTATIONS} a WHERE 1=1`;
-    if (statut) {
-      countParams.push(statut);
-      countQuery += ` AND a.statut = $${countParams.length}`;
-    }
-    if (usager_id) {
-      countParams.push(usager_id);
-      countQuery += ` AND (a.usager_id = $${countParams.length} OR a.usager2_id = $${countParams.length} OR a.usager3_id = $${countParams.length})`;
-    }
-    const countResult = await db.get(countQuery, countParams);
+    const where = `WHERE ${whereParts.join(" AND ")}`;
+    const rows = await db.all(
+      `SELECT a.*, u.nom as usager_nom, u.prenom as usager_prenom, u2.nom as usager2_nom, u2.prenom as usager2_prenom, u3.nom as usager3_nom, u3.prenom as usager3_prenom, t.nom as template_nom
+      ${FROM}
+      ${where}
+      ORDER BY COALESCE(a.date_generation, a.created_at) DESC NULLS LAST, a.created_at DESC
+      LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+      [...params, limit, offset]
+    );
+    const countResult = await db.get(
+      `SELECT COUNT(*) as total ${FROM} ${where}`,
+      params
+    );
     return { rows, total: parseInt(countResult.total, 10) };
   },
 
@@ -148,6 +158,68 @@ const attestationRepository = {
          AND ((usager_id = $2 AND usager2_id = $3) OR (usager_id = $3 AND usager2_id = $2))
        ORDER BY date_generation ASC`,
       [templateId, usagerId, usager2Id]
+    );
+  },
+
+  async findAllAda({ search, limite = 100, offset = 0 } = {}) {
+    const TABLE_ADA = `"${SCHEMA_NAME}".attestations_ada`;
+    const whereParts = [];
+    const params = [];
+    const searchClause = (p) => `(
+      legacy_id_demande::text ILIKE $${p}
+      OR coalesce(hg.nom,'') ILIKE $${p}
+      OR coalesce(hg.prenom,'') ILIKE $${p}
+      OR coalesce(hb.nom,'') ILIKE $${p}
+      OR coalesce(hb.prenom,'') ILIKE $${p}
+      OR coalesce(a.no_cerfa,'') ILIKE $${p}
+      OR coalesce(a.no_piece,'') ILIKE $${p}
+    )`;
+    if (search) {
+      params.push(`%${search}%`);
+      whereParts.push(searchClause(params.length));
+    }
+    const where = whereParts.length ? `WHERE ${whereParts.join(" AND ")}` : "";
+    const query = `SELECT a.legacy_id_demande, a.no_cerfa, a.no_piece, a.date_deb_valid, a.date_fin_valid,
+        a.hebergeant_legacy_id, a.heberge_legacy_id, a.hebergeant_usager_id, a.heberge_usager_id,
+        a.hebergeant_assure, a.lien_parente_code, a.ressource_montant, a.created_at,
+        hg.nom AS hebergeant_nom, hg.prenom AS hebergeant_prenom,
+        hb.nom AS heberge_nom, hb.prenom AS heberge_prenom,
+        att.id AS attestation_id, att.titre AS attestation_titre
+      FROM ${TABLE_ADA} a
+      LEFT JOIN "${SCHEMA_NAME}".usagers hg ON a.hebergeant_usager_id = hg.id
+      LEFT JOIN "${SCHEMA_NAME}".usagers hb ON a.heberge_usager_id = hb.id
+      LEFT JOIN ${TABLE_ATTESTATIONS} att
+        ON att.statut = 'import_alto'
+       AND att.contenu_genere->>'Numéro demande legacy' = a.legacy_id_demande::text
+      ${where}
+      ORDER BY a.date_deb_valid DESC NULLS LAST, a.legacy_id_demande DESC
+      LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+    params.push(limite, offset);
+    const rows = await db.all(query, params);
+    const countParams = [];
+    if (search) countParams.push(`%${search}%`);
+    const countQuery = `SELECT COUNT(*) AS total FROM ${TABLE_ADA} a
+      LEFT JOIN "${SCHEMA_NAME}".usagers hg ON a.hebergeant_usager_id = hg.id
+      LEFT JOIN "${SCHEMA_NAME}".usagers hb ON a.heberge_usager_id = hb.id
+      ${search ? `WHERE ${searchClause(1)}` : ""}`;
+    const countResult = await db.get(countQuery, search ? [...countParams] : []);
+    return { rows, total: parseInt(countResult.total, 10) };
+  },
+
+  async findAdaByLegacyId(legacyId) {
+    return db.get(
+      `SELECT a.*,
+        hg.nom AS hebergeant_nom, hg.prenom AS hebergeant_prenom, hg.civilite AS hebergeant_civilite,
+        hb.nom AS heberge_nom, hb.prenom AS heberge_prenom, hb.civilite AS heberge_civilite,
+        att.id AS attestation_id, att.titre AS attestation_titre
+       FROM "${SCHEMA_NAME}".attestations_ada a
+       LEFT JOIN "${SCHEMA_NAME}".usagers hg ON a.hebergeant_usager_id = hg.id
+       LEFT JOIN "${SCHEMA_NAME}".usagers hb ON a.heberge_usager_id = hb.id
+       LEFT JOIN ${TABLE_ATTESTATIONS} att
+         ON att.statut = 'import_alto'
+        AND att.contenu_genere->>'Numéro demande legacy' = a.legacy_id_demande::text
+       WHERE a.legacy_id_demande = $1`,
+      [legacyId]
     );
   },
 };

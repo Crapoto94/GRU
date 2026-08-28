@@ -7,7 +7,7 @@ interface User {
   nom: string;
   prenom: string;
   email: string;
-  role: "utilisateur" | "administrateur";
+  role: "utilisateur" | "administrateur" | "dpd";
 }
 
 interface AuthContextType {
@@ -16,6 +16,8 @@ interface AuthContextType {
   login: (token: string, user: User) => void;
   logout: () => void;
   isAdmin: boolean;
+  isDpd: boolean;
+  canAccessRgpd: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -24,6 +26,8 @@ const AuthContext = createContext<AuthContextType>({
   login: () => {},
   logout: () => {},
   isAdmin: false,
+  isDpd: false,
+  canAccessRgpd: false,
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -54,7 +58,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [token]);
 
   return (
-    <AuthContext.Provider value={{ user, token, login: loginFn, logout, isAdmin: user?.role === "administrateur" }}>
+    <AuthContext.Provider value={{
+      user,
+      token,
+      login: loginFn,
+      logout,
+      isAdmin: user?.role === "administrateur",
+      isDpd: user?.role === "dpd",
+      canAccessRgpd: user?.role === "administrateur" || user?.role === "dpd",
+    }}>
       {children}
     </AuthContext.Provider>
   );

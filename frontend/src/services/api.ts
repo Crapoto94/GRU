@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { Usager, Template, Attestation, PaginatedResponse, Dossier, DossierPiece, DossierSuivi, DossierNotificationLog, DossierListItem, Logement, TypeLogement } from "../types";
+import type { Usager, Template, Attestation, PaginatedResponse, Dossier, DossierPiece, DossierSuivi, DossierNotificationLog, DossierListItem, Logement, TypeLogement, ConservationRegle, AdaLegacy } from "../types";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "",
@@ -58,9 +58,13 @@ export const attestationsApi = {
   deleteTemplate: (id: string) => api.delete(`/api/v1/attestations/templates/${id}`),
   downloadTemplate: (id: string) =>
     api.get(`/api/v1/attestations/templates/${id}/download`, { responseType: "blob" }),
-  list: (params?: { statut?: string; usager_id?: string }) =>
+  list: (params?: { statut?: string; usager_id?: string; search?: string; limit?: number; offset?: number }) =>
     api.get<PaginatedResponse<Attestation>>("/api/v1/attestations", { params }),
   getById: (id: string) => api.get<Attestation>(`/api/v1/attestations/${id}`),
+  listAda: (params?: { search?: string; limite?: number; offset?: number }) =>
+    api.get<PaginatedResponse<AdaLegacy>>("/api/v1/attestations/ada", { params }),
+  getAda: (legacyId: number | string) =>
+    api.get<AdaLegacy>(`/api/v1/attestations/ada/${legacyId}`),
   generate: (data: { usager_id: string; usager2_id?: string; usager3_id?: string; template_id: string; custom_data?: Record<string, string>; logement_concerne?: "principal" | "secondaire" }) =>
     api.post<Attestation>("/api/v1/attestations/generate", data),
   download: (id: string) =>
@@ -129,6 +133,12 @@ export const authApi = {
   loginAD: (login: string, password: string) => api.post("/api/v1/auth/login-ad", { login, password }),
   changePassword: (current_password: string, new_password: string) =>
     api.post("/api/v1/auth/change-password", { current_password, new_password }),
+};
+
+export const rgpdApi = {
+  listConservation: () => api.get<ConservationRegle[]>("/api/v1/rgpd/conservation"),
+  updateConservation: (cle: string, data: { conservation_mois: number; description?: string }) =>
+    api.put<ConservationRegle>(`/api/v1/rgpd/conservation/${encodeURIComponent(cle)}`, data),
 };
 
 export default api;

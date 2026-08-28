@@ -17,6 +17,7 @@ const parametrageRoutes = require("./modules/parametrage/parametrage.routes");
 const adRoutes = require("./modules/ad/ad.routes");
 const logsRoutes = require("./modules/logs/logs.routes");
 const dossiersRoutes = require("./modules/dossiers/dossiers.routes");
+const rgpdRoutes = require("./modules/rgpd/rgpd.routes");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -67,6 +68,7 @@ app.use("/api/v1/parametrage", authenticateToken, parametrageRoutes);
 app.use("/api/v1/ad", authenticateToken, adRoutes);
 app.use("/api/v1/logs", authenticateToken, logsRoutes);
 app.use("/api/v1/dossiers", authenticateToken, dossiersRoutes);
+app.use("/api/v1/rgpd", authenticateToken, rgpdRoutes);
 
 app.use((err, _req, res, _next) => {
   console.error("[ERROR]", err.message);

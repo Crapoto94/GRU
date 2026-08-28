@@ -1,11 +1,17 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Download, Trash2 } from "lucide-react";
+import { Plus, Download, Trash2, Eye, Search } from "lucide-react";
 import toast from "react-hot-toast";
 import { formatNom, formatPrenom } from "../utils/format";
 import { attestationsApi } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
-import type { Attestation } from "../types";
+import AdaLegacyPreviewModal from "../components/AdaLegacyPreviewModal";
+import type { Attestation, AdaLegacy } from "../types";
+
+const STATUT_LABELS: Record<string, { label: string; className: string }> = {
+  genere: { label: "Generee", className: "bg-green-100 text-green-700" },
+  import_alto: { label: "Import ALTO", className: "bg-indigo-100 text-indigo-700" },
+};
 
 export default function AttestationsList() {
   const navigate = useNavigate();
@@ -13,11 +19,14 @@ export default function AttestationsList() {
   const [attestations, setAttestations] = useState<Attestation[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState("");
+  const [previewAda, setPreviewAda] = useState<AdaLegacy | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
-  const loadAttestations = async () => {
+  const loadAttestations = async (q = search) => {
     setLoading(true);
     try {
-      const res = await attestationsApi.list();
+      const res = await attestationsApi.list({ search: q || undefined });
       setAttestations(res.data.rows);
       setTotal(res.data.total);
     } catch {
@@ -29,7 +38,13 @@ export default function AttestationsList() {
 
   useEffect(() => {
     loadAttestations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    loadAttestations(search);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
 
   const handleDelete = async (id: string) => {
     if (!window.confirm("Supprimer cette attestation ?")) return;
@@ -59,17 +74,53 @@ export default function AttestationsList() {
     }
   };
 
+  const handlePreview = async (a: Attestation) => {
+    const legacyId = a.contenu_genere?.["Numéro demande legacy"];
+    if (!legacyId) {
+      toast.error("Numero de demande legacy introuvable");
+      return;
+    }
+    setPreviewLoading(true);
+    setPreviewAda(null);
+    try {
+      const res = await attestationsApi.getAda(legacyId);
+      setPreviewAda(res.data);
+    } catch {
+      toast.error("Impossible de charger les infos de la demande ALTO");
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-ville-dark">Attestations</h1>
-        <button
-          onClick={() => navigate("/attestations/nouvelle")}
-          className="flex items-center gap-2 bg-ville-primary text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
-        >
-          <Plus size={16} />
-          Nouvelle attestation
-        </button>
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Nom, telephone, email..."
+              className="pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ville-primary"
+            />
+          </div>
+          <button
+            onClick={() => navigate("/attestations/ada")}
+            className="flex items-center gap-2 border border-ville-primary text-ville-primary px-4 py-2 rounded-lg hover:bg-blue-50 transition"
+          >
+            <Eye size={16} />
+            Attestations ALTO
+          </button>
+          <button
+            onClick={() => navigate("/attestations/nouvelle")}
+            className="flex items-center gap-2 bg-ville-primary text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+          >
+            <Plus size={16} />
+            Nouvelle attestation
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
@@ -118,14 +169,23 @@ export default function AttestationsList() {
                   <td className="px-6 py-4 text-sm text-gray-600">{a.template_nom}</td>
                   <td className="px-6 py-4 text-sm">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      a.statut === "genere" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"
-                    }`}>{a.statut}</span>
+                      STATUT_LABELS[a.statut]?.className || "bg-gray-100 text-gray-600"
+                    }`}>{STATUT_LABELS[a.statut]?.label || a.statut}</span>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-600">
                     {a.date_generation ? new Date(a.date_generation).toLocaleDateString("fr-FR") : "-"}
                   </td>
                   <td className="px-6 py-4 text-sm text-right">
                     <div className="flex items-center justify-end gap-2">
+                      {!a.fichier_pdf && (
+                        <button
+                          onClick={() => handlePreview(a)}
+                          className="p-1 text-ville-primary hover:bg-blue-50 rounded"
+                          title="Previsualiser les infos ALTO"
+                        >
+                          <Eye size={16} />
+                        </button>
+                      )}
                       {a.fichier_pdf && (
                         <button
                           onClick={() => handleDownload(a.id)}
@@ -152,6 +212,12 @@ export default function AttestationsList() {
           </tbody>
         </table>
       </div>
+
+      <AdaLegacyPreviewModal
+        ada={previewAda}
+        loading={previewLoading}
+        onClose={() => setPreviewAda(null)}
+      />
     </div>
   );
 }

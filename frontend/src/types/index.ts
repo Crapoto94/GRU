@@ -91,6 +91,35 @@ export interface Attestation {
   created_at: string;
 }
 
+export interface AdaLegacy {
+  legacy_id_demande: number;
+  no_cerfa: string | null;
+  no_piece: string | null;
+  date_deb_valid: string | null;
+  date_fin_valid: string | null;
+  date_deliv_piece: string | null;
+  lieu_deliv_piece: string | null;
+  date_fin_validite_piece: string | null;
+  hebergeant_legacy_id: number | null;
+  heberge_legacy_id: number | null;
+  hebergeant_usager_id: string | null;
+  heberge_usager_id: string | null;
+  hebergeant_assure: boolean | null;
+  lien_parente_code: number | null;
+  ressource_montant: number | null;
+  ressource_observations: string | null;
+  hebergeant_nom: string | null;
+  hebergeant_prenom: string | null;
+  hebergeant_civilite?: string | null;
+  heberge_nom: string | null;
+  heberge_prenom: string | null;
+  heberge_civilite?: string | null;
+  attestation_id: string | null;
+  attestation_titre: string | null;
+  data?: Record<string, string | null> | null;
+  created_at: string;
+}
+
 export interface PaginatedResponse<T> {
   rows: T[];
   total: number;
@@ -166,4 +195,16 @@ export interface DossierListItem {
   nb_arrive: number;
   nb_recupere: number;
   date_demande_attente: string | null;
+}
+
+export type ConservationCategorie = "attestations" | "dossiers" | "usagers";
+
+export interface ConservationRegle {
+  cle: string;
+  libelle: string;
+  categorie: ConservationCategorie;
+  conservation_mois: number;
+  description: string | null;
+  actif: boolean;
+  updated_at: string | null;
 }

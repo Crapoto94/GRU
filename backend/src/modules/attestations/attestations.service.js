@@ -117,6 +117,20 @@ const attestationService = {
     return attestationRepository.findAll(params);
   },
 
+  async listAda(params) {
+    return attestationRepository.findAllAda({
+      search: params.search,
+      limite: Math.min(parseInt(params.limite, 10) || 100, 500),
+      offset: parseInt(params.offset, 10) || 0,
+    });
+  },
+
+  async getAdaByLegacyId(legacyId) {
+    const ada = await attestationRepository.findAdaByLegacyId(legacyId);
+    if (!ada) throw Object.assign(new Error("Demande d'attestation d'accueil non trouvee"), { status: 404 });
+    return ada;
+  },
+
   async getAttestationById(id) {
     const attestation = await attestationRepository.findAttestationById(id);
     if (!attestation) throw Object.assign(new Error("Attestation non trouvee"), { status: 404 });

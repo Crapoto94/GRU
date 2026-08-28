@@ -16,7 +16,7 @@ const usersService = {
     if (!data.login || !data.nom || !data.prenom || !data.email || !data.password) {
       throw Object.assign(new Error("Login, nom, prenom, email et mot de passe sont requis"), { status: 400 });
     }
-    if (!["utilisateur", "administrateur"].includes(data.role)) {
+    if (!["utilisateur", "administrateur", "dpd"].includes(data.role)) {
       throw Object.assign(new Error("Role invalide"), { status: 400 });
     }
     data.login = data.login.toLowerCase();
@@ -30,7 +30,7 @@ const usersService = {
       throw Object.assign(new Error("Login, nom, prenom et email sont requis"), { status: 400 });
     }
     const role = data.role || "utilisateur";
-    if (!["utilisateur", "administrateur"].includes(role)) {
+    if (!["utilisateur", "administrateur", "dpd"].includes(role)) {
       throw Object.assign(new Error("Role invalide"), { status: 400 });
     }
     const existing = await usersRepository.findByLogin(data.login);
@@ -66,7 +66,7 @@ const usersService = {
 
   async update(id, data, adminUser, ip) {
     await this.getById(id);
-    if (data.role && !["utilisateur", "administrateur"].includes(data.role)) {
+    if (data.role && !["utilisateur", "administrateur", "dpd"].includes(data.role)) {
       throw Object.assign(new Error("Role invalide"), { status: 400 });
     }
     const updated = await usersRepository.update(id, data);

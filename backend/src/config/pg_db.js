@@ -217,6 +217,100 @@ async function setupDb() {
       )
     `);
 
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS "${SCHEMA_NAME}".rgpd_conservation (
+        cle VARCHAR(100) PRIMARY KEY,
+        libelle VARCHAR(255) NOT NULL,
+        categorie VARCHAR(100) NOT NULL,
+        conservation_mois INTEGER NOT NULL DEFAULT 36,
+        description TEXT,
+        actif BOOLEAN DEFAULT TRUE,
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS "${SCHEMA_NAME}".usagers_historique (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        usager_id UUID NOT NULL REFERENCES "${SCHEMA_NAME}".usagers(id) ON DELETE CASCADE,
+        legacy_id_enreg BIGINT NOT NULL,
+        legacy_id_precedent BIGINT,
+        legacy_id_origine BIGINT NOT NULL,
+        date_enreg DATE,
+        derni_etat BOOLEAN NOT NULL DEFAULT FALSE,
+        desc_modif TEXT,
+        data JSONB NOT NULL DEFAULT '{}',
+        imported_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_usagers_historique_usager ON "${SCHEMA_NAME}".usagers_historique(usager_id)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_usagers_historique_legacy_enreg ON "${SCHEMA_NAME}".usagers_historique(legacy_id_enreg)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_usagers_historique_legacy_origine ON "${SCHEMA_NAME}".usagers_historique(legacy_id_origine)`);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS "${SCHEMA_NAME}".usagers_liens_familiaux (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        usager_id UUID NOT NULL REFERENCES "${SCHEMA_NAME}".usagers(id) ON DELETE CASCADE,
+        type_lien VARCHAR(20) NOT NULL CHECK (type_lien IN ('conjoint','pere','mere')),
+        lien_legacy_id_enreg BIGINT,
+        lien_usager_id UUID REFERENCES "${SCHEMA_NAME}".usagers(id) ON DELETE SET NULL,
+        imported_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(usager_id, type_lien)
+      )
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_usagers_liens_familiaux_lien ON "${SCHEMA_NAME}".usagers_liens_familiaux(lien_usager_id)`);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS "${SCHEMA_NAME}".attestations_ada (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        legacy_id_demande BIGINT NOT NULL UNIQUE,
+        no_cerfa VARCHAR(50),
+        no_piece VARCHAR(100),
+        date_deb_valid DATE,
+        date_fin_valid DATE,
+        date_deliv_piece DATE,
+        lieu_deliv_piece VARCHAR(255),
+        date_fin_validite_piece DATE,
+        hebergeant_legacy_id BIGINT,
+        heberge_legacy_id BIGINT,
+        hebergeant_usager_id UUID REFERENCES "${SCHEMA_NAME}".usagers(id) ON DELETE SET NULL,
+        heberge_usager_id UUID REFERENCES "${SCHEMA_NAME}".usagers(id) ON DELETE SET NULL,
+        hebergeant_assure BOOLEAN,
+        lien_parente_code INTEGER,
+        ressource_montant NUMERIC(12,2),
+        ressource_observations TEXT,
+        ressource_charge BOOLEAN,
+        verification_logement BOOLEAN,
+        verification_date DATE,
+        verification_agent VARCHAR(255),
+        conform_logement BOOLEAN,
+        conform_logement_obs TEXT,
+        on_heberge_venu BOOLEAN,
+        date_avispref DATE,
+        type_avispref VARCHAR(100),
+        lib_avispref TEXT,
+        data JSONB NOT NULL DEFAULT '{}',
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_attestations_ada_hebergeant ON "${SCHEMA_NAME}".attestations_ada(hebergeant_usager_id)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_attestations_ada_heberge ON "${SCHEMA_NAME}".attestations_ada(heberge_usager_id)`);
+
+    const seedRgpd = [
+      `INSERT INTO "${SCHEMA_NAME}".rgpd_conservation (cle, libelle, categorie, conservation_mois, description)
+       SELECT 'attestation_' || id, nom || ' (template attestation)', 'attestations', 36, description
+       FROM "${SCHEMA_NAME}".templates
+       WHERE actif
+       ON CONFLICT (cle) DO NOTHING`,
+      `INSERT INTO "${SCHEMA_NAME}".rgpd_conservation (cle, libelle, categorie, conservation_mois, description)
+       VALUES
+         ('demandes_cni', 'Suivi des demandes CNI / Passeport', 'dossiers', 24, 'Donnees liees aux demandes de pieces d''identite (CNI, Passeport)'),
+         ('infos_usager', 'Informations usager (registre)', 'usagers', 60, 'Donnees personnelles des usagers inscrites dans le registre')
+       ON CONFLICT (cle) DO NOTHING`,
+    ];
+    for (const sql of seedRgpd) await client.query(sql);
+
     const alterCols = [
       `ALTER TABLE "${SCHEMA_NAME}".users ADD COLUMN IF NOT EXISTS fonction VARCHAR(200)`,
       `ALTER TABLE "${SCHEMA_NAME}".users ADD COLUMN IF NOT EXISTS service VARCHAR(200)`,

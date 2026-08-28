@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { Users, FileText, Layout, Settings, LogOut, Database, Shield, Globe, ScrollText, Info, HelpCircle, Calendar, IdCard, MessageSquare } from "lucide-react";
+import { Users, FileText, Layout, Settings, LogOut, Database, Shield, Globe, ScrollText, Info, HelpCircle, Calendar, IdCard, MessageSquare, ShieldCheck, FileSearch } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { getVersion, formatVersion } from "../services/version";
@@ -20,7 +20,7 @@ const subLinkClass = ({ isActive }: { isActive: boolean }) =>
 
 export default function Sidebar() {
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const { user, logout, isAdmin } = useAuth();
+  const { user, logout, isAdmin, canAccessRgpd } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -47,10 +47,20 @@ export default function Sidebar() {
           <FileText size={18} />
           Attestations
         </NavLink>
+        <NavLink to="/attestations/ada" className={subLinkClass}>
+          <FileSearch size={14} />
+          Attestations ALTO (archive)
+        </NavLink>
         <NavLink to="/dossiers" className={linkClass}>
           <IdCard size={18} />
           Demandes CNI / Passeport
         </NavLink>
+        {canAccessRgpd && (
+          <NavLink to="/rgpd" className={linkClass}>
+            <ShieldCheck size={18} />
+            RGPD
+          </NavLink>
+        )}
 
         <div className="pt-2 mt-2 border-t border-gray-100">
           <button
@@ -110,7 +120,9 @@ export default function Sidebar() {
       <div className="border-t border-gray-100 pt-3 mt-3">
         <div className="px-4 mb-2">
           <p className="text-sm font-medium text-gray-800">{user?.prenom} {user?.nom}</p>
-          <p className="text-xs text-gray-500">{user?.role === "administrateur" ? "Administrateur" : "Utilisateur"}</p>
+          <p className="text-xs text-gray-500">
+            {user?.role === "administrateur" ? "Administrateur" : user?.role === "dpd" ? "DPD" : "Utilisateur"}
+          </p>
         </div>
         <div className="flex items-center justify-between px-4 mb-2 text-xs text-gray-400">
           <span>Version {formatVersion(getVersion())}</span>

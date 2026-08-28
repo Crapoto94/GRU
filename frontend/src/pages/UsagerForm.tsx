@@ -335,6 +335,12 @@ export default function UsagerForm() {
         <h1 className="text-2xl font-bold text-ville-dark">
           {isEdit ? "Modifier l'usager" : "Nouvel usager"}
         </h1>
+        {isEdit && form.created_at && (
+          <span className="px-3 py-1.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+            Cree le {new Date(form.created_at).toLocaleDateString("fr-FR")}
+            {form.created_by === "IMPORT_LEGACY" ? " · Import ALTO" : ""}
+          </span>
+        )}
       </div>
 
       {!isEdit && prefill && (

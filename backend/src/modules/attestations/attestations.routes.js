@@ -313,6 +313,19 @@ router.put("/templates/:id", upload.single("file"), async (req, res, next) => {
  *         name: usager_id
  *         schema:
  *           type: string
+ *       - in: query
+ *         name: search
+ *         description: Recherche par nom, prenom, telephone, mobile ou email d'un usager
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
  *     responses:
  *       200:
  *         description: Liste des attestations
@@ -321,6 +334,63 @@ router.get("/", async (req, res, next) => {
   try {
     const result = await attestationService.listAttestations(req.query);
     res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * @openapi
+ * /api/v1/attestations/ada:
+ *   get:
+ *     tags: [Attestations]
+ *     summary: Lister les demandes d'attestation d'accueil (import ALTO)
+ *     parameters:
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: limite
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Liste des attestations d'accueil legacy
+ */
+router.get("/ada", async (req, res, next) => {
+  try {
+    const result = await attestationService.listAda(req.query);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * @openapi
+ * /api/v1/attestations/ada/{legacyId}:
+ *   get:
+ *     tags: [Attestations]
+ *     summary: Obtenir une demande d'attestation d'accueil (import ALTO) par numero legacy
+ *     parameters:
+ *       - in: path
+ *         name: legacyId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Detail de la demande legacy
+ */
+router.get("/ada/:legacyId", async (req, res, next) => {
+  try {
+    const ada = await attestationService.getAdaByLegacyId(req.params.legacyId);
+    res.json(ada);
   } catch (err) {
     next(err);
   }

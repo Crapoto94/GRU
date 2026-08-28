@@ -46,7 +46,7 @@ const usagerRepository = {
       params.push(`%${search}%`);
       query += ` AND (u.nom ILIKE $${params.length - 4} OR u.prenom ILIKE $${params.length - 3} OR u.email ILIKE $${params.length - 2} OR u.telephone ILIKE $${params.length - 1} OR u.mobile ILIKE $${params.length})`;
     }
-    query += ` ORDER BY u.created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+    query += ` ORDER BY lower(u.nom) ASC, lower(u.prenom) ASC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
     params.push(limit, offset);
     const rows = await db.all(query, params);
     const countResult = await db.get(
