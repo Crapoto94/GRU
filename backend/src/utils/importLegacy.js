@@ -3,6 +3,7 @@ const path = require("path");
 const XLSX = require("xlsx");
 const { extractRowsByColumn } = require("./xlsxStreamReader");
 const { pool, SCHEMA_NAME, setupDb } = require("../config/pg_db");
+const { decodeOccupantsHabituels, loadLienParenteLabels } = require("./occupantsHabituels");
 
 const HIST_FILE = process.env.IMPORT_HIST_FILE || path.resolve(__dirname, "../../../xls/historique individus2.xlsx");
 const ADA_FILE = process.env.IMPORT_ADA_FILE || path.resolve(__dirname, "../../../xls/ada2.xlsx");
@@ -288,6 +289,7 @@ async function importWorkbooks() {
     console.log(`[IMPORT] usagers inseres: ${canonicalCount}`);
 
     // --- Phase 2 : liens familiaux + logements, par lots ---
+    const lienParenteLabelsForOccupants = await loadLienParenteLabels(client, SCHEMA_NAME);
     const lienRows = [];
     const logementRows = [];
     origineList.forEach(({ canon }, idx) => {
@@ -321,7 +323,7 @@ async function importWorkbooks() {
           surface_logement: parseFloat(cleanText(canon.SURFACE)) || null,
           nombre_pieces: toInt(canon.PIECES),
           etat_sanitaire: cleanText(canon.ETAT_SANITAIRE),
-          occupants_habituels_details: cleanText(canon.OCCUP_HABITUELS),
+          occupants_habituels_details: decodeOccupantsHabituels(cleanText(canon.OCCUP_HABITUELS), lienParenteLabelsForOccupants),
           occupants_permanents: toInt(canon.OCCUP_PERMANENTS),
           occupants_temporaires: toInt(canon.OCCUP_TEMPORAIRES),
           statut_occupation: statut,
