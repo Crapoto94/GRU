@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Trash2, Mail, MessageSquare, Send, IdCard, History } from "lucide-react";
+import { ArrowLeft, Trash2, Mail, MessageSquare, Send, IdCard, History, ListTree } from "lucide-react";
 import toast from "react-hot-toast";
 import { formatNom, formatPrenom } from "../utils/format";
 import { dossiersApi } from "../services/api";
@@ -32,6 +32,7 @@ export default function DossierDetail() {
   const [sendingKey, setSendingKey] = useState<string | null>(null);
   const [historyPieceId, setHistoryPieceId] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<DossierNotificationLog[]>([]);
+  const [timelinePieceId, setTimelinePieceId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -206,6 +207,38 @@ export default function DossierDetail() {
                     <span className="text-green-600">Notifie le {new Date(piece.date_notification).toLocaleDateString("fr-FR")}</span>
                   )}
                 </div>
+
+                {piece.etapes.length > 0 && (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      onClick={() => setTimelinePieceId(timelinePieceId === piece.id ? null : piece.id)}
+                      className="flex items-center gap-1.5 text-gray-500 hover:text-gray-700 px-2 py-1.5 rounded-lg text-xs"
+                    >
+                      <ListTree size={14} />
+                      Frise chronologique ({piece.etapes.length})
+                    </button>
+                  </div>
+                )}
+
+                {timelinePieceId === piece.id && (
+                  <div className="mt-2 border-t border-gray-100 pt-3 pl-1">
+                    <ol className="space-y-3">
+                      {piece.etapes.map((e) => (
+                        <li key={e.id} className="flex items-start gap-3">
+                          <span
+                            className={`mt-1 w-2.5 h-2.5 rounded-full shrink-0 ${
+                              e.statut_equivalent ? STATUT_COLORS[e.statut_equivalent].split(" ")[0] : "bg-gray-300"
+                            }`}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-gray-800">{e.libelle}</p>
+                            <p className="text-xs text-gray-400">{new Date(e.date_etape).toLocaleString("fr-FR")}</p>
+                          </div>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
 
                 {piece.statut === "arrive" && (
                   <div className="flex items-center gap-2 flex-wrap">

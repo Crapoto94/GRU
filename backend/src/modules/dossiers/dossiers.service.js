@@ -19,7 +19,14 @@ const dossierService = {
     if (!dossier) throw Object.assign(new Error("Dossier non trouve"), { status: 404 });
     const pieces = await dossierRepository.findPiecesByDossier(id);
     const suivi = await dossierRepository.findSuiviByDossier(id);
-    return { ...dossier, pieces, suivi };
+    const etapes = await dossierRepository.findEtapesByDossier(id);
+    const etapesByPiece = new Map();
+    for (const e of etapes) {
+      if (!etapesByPiece.has(e.dossier_piece_id)) etapesByPiece.set(e.dossier_piece_id, []);
+      etapesByPiece.get(e.dossier_piece_id).push(e);
+    }
+    const piecesWithEtapes = pieces.map((p) => ({ ...p, etapes: etapesByPiece.get(p.id) || [] }));
+    return { ...dossier, pieces: piecesWithEtapes, suivi };
   },
 
   async create(data, user, ip) {

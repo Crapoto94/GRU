@@ -5,6 +5,7 @@ const PIECES = `"${SCHEMA_NAME}".dossier_pieces`;
 const SUIVI = `"${SCHEMA_NAME}".dossier_suivi`;
 const NOTIFS = `"${SCHEMA_NAME}".dossier_notifications`;
 const USAGERS = `"${SCHEMA_NAME}".usagers`;
+const ETAPES = `"${SCHEMA_NAME}".dossier_piece_etapes`;
 
 const PIECE_SELECT = `
   SELECT p.*, u.nom as usager_nom, u.prenom as usager_prenom, u.civilite as usager_civilite,
@@ -80,6 +81,16 @@ const dossierRepository = {
 
   async findPiecesByDossier(dossierId) {
     return db.all(`${PIECE_SELECT} WHERE p.dossier_id = $1 ORDER BY p.created_at`, [dossierId]);
+  },
+
+  async findEtapesByDossier(dossierId) {
+    return db.all(
+      `SELECT e.* FROM ${ETAPES} e
+       JOIN ${PIECES} p ON p.id = e.dossier_piece_id
+       WHERE p.dossier_id = $1
+       ORDER BY e.dossier_piece_id, e.ordre`,
+      [dossierId]
+    );
   },
 
   async findPieceById(id) {
