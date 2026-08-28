@@ -4,7 +4,7 @@ import { ArrowLeft, Trash2, Mail, MessageSquare, Send, IdCard, History, ListTree
 import toast from "react-hot-toast";
 import { formatNom, formatPrenom } from "../utils/format";
 import { dossiersApi } from "../services/api";
-import type { Dossier, DossierPiece, StatutPiece, DossierNotificationLog } from "../types";
+import type { Dossier, DossierPiece, StatutPiece, DossierNotificationLog, EtapeCatalogueItem } from "../types";
 
 const STATUT_LABELS: Record<StatutPiece, string> = {
   demande: "Demandé",
@@ -33,6 +33,7 @@ export default function DossierDetail() {
   const [historyPieceId, setHistoryPieceId] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<DossierNotificationLog[]>([]);
   const [timelinePieceId, setTimelinePieceId] = useState<string | null>(null);
+  const [etapeCatalogue, setEtapeCatalogue] = useState<EtapeCatalogueItem[]>([]);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -50,6 +51,10 @@ export default function DossierDetail() {
 
   useEffect(() => { load(); }, [load]);
 
+  useEffect(() => {
+    dossiersApi.etapesCatalogue().then((res) => setEtapeCatalogue(res.data)).catch(() => {});
+  }, []);
+
   const errorMessage = (err: unknown, fallback: string) => {
     if (err && typeof err === "object" && "response" in err) {
       const axErr = err as { response?: { data?: { error?: string } } };
@@ -58,13 +63,14 @@ export default function DossierDetail() {
     return fallback;
   };
 
-  const handleStatutChange = async (piece: DossierPiece, statut: StatutPiece) => {
+  const handleEtapeChange = async (piece: DossierPiece, code: string) => {
+    if (!code) return;
     try {
-      await dossiersApi.updateStatut(piece.id, statut);
-      toast.success("Statut mis a jour");
+      await dossiersApi.updateStatut(piece.id, code);
+      toast.success("Etape ajoutee a la frise");
       load();
     } catch (err) {
-      toast.error(errorMessage(err, "Erreur lors du changement de statut"));
+      toast.error(errorMessage(err, "Erreur lors du changement d'etat"));
     }
   };
 
@@ -178,14 +184,26 @@ export default function DossierDetail() {
                     <span>{formatPrenom(piece.usager_prenom)} {formatNom(piece.usager_nom)}</span>
                   </div>
                   <div className="flex items-center gap-2">
+                    <span className={`text-xs font-medium rounded-full px-2 py-1 ${STATUT_COLORS[piece.statut]}`}>
+                      {STATUT_LABELS[piece.statut]}
+                    </span>
                     <select
-                      value={piece.statut}
-                      onChange={(e) => handleStatutChange(piece, e.target.value as StatutPiece)}
-                      className={`text-xs font-medium rounded-full px-2 py-1 border-0 ${STATUT_COLORS[piece.statut]}`}
+                      value=""
+                      onChange={(e) => handleEtapeChange(piece, e.target.value)}
+                      className="text-xs border border-gray-300 rounded-lg px-2 py-1.5 text-gray-600"
                     >
-                      {(Object.keys(STATUT_LABELS) as StatutPiece[]).map((s) => (
-                        <option key={s} value={s}>{STATUT_LABELS[s]}</option>
-                      ))}
+                      <option value="">Changer d&apos;état...</option>
+                      {(Object.keys(STATUT_LABELS) as StatutPiece[]).map((s) => {
+                        const items = etapeCatalogue.filter((e) => e.statut === s);
+                        if (items.length === 0) return null;
+                        return (
+                          <optgroup key={s} label={STATUT_LABELS[s]}>
+                            {items.map((e) => (
+                              <option key={e.code} value={e.code}>{e.libelle}</option>
+                            ))}
+                          </optgroup>
+                        );
+                      })}
                     </select>
                     <button
                       onClick={() => handleRemovePiece(piece)}

@@ -3,10 +3,9 @@ const usagerRepository = require("../usagers/usagers.repository");
 const { sendSms, sendMail } = require("../../utils/apiVille");
 const { logAcces } = require("../../utils/logger");
 const { typePieceLabel, renderTemplate, getDossierMessageTemplates } = require("../../utils/messageTemplates");
+const { ETAPE_LABELS, ETAPE_LIST } = require("../../utils/dossierEtapes");
 
 const TYPES_PIECE = ["CNI", "Passeport"];
-const STATUTS = ["demande", "ajourne", "arrive", "recupere", "refuse"];
-const STATUT_LABELS = { demande: "Demandé", ajourne: "Ajourné", arrive: "Arrivé", recupere: "Récupéré", refuse: "Refusé" };
 const CANAUX = ["sms", "email", "both"];
 
 const dossierService = {
@@ -79,24 +78,34 @@ const dossierService = {
     await logAcces(user, "DELETE", "dossiers_pieces_identite", id, {}, ip);
   },
 
-  async updateStatut(pieceId, statut, commentaire, user, ip) {
-    if (!STATUTS.includes(statut)) {
-      throw Object.assign(new Error("Statut invalide"), { status: 400 });
+  getEtapeCatalog() {
+    return ETAPE_LIST;
+  },
+
+  // Le changement d'etat depuis la fiche dossier alimente la frise
+  // chronologique (dossier_piece_etapes), pas le suivi (dossier_suivi) :
+  // le catalogue liste tous les cas reels observes dans l'historique ALTO
+  // (voir utils/dossierEtapes.js), pas seulement les 4-5 statuts sommaires.
+  async updateStatut(pieceId, code, user, ip) {
+    const entry = ETAPE_LABELS[code];
+    if (!entry) {
+      throw Object.assign(new Error("Etape invalide"), { status: 400 });
     }
     const piece = await dossierRepository.findPieceById(pieceId);
     if (!piece) throw Object.assign(new Error("Piece non trouvee"), { status: 404 });
 
-    const ancien = piece.statut;
-    const updated = await dossierRepository.updatePieceStatut(pieceId, statut);
-
-    let texte = `${piece.type_piece} de ${piece.usager_prenom} ${piece.usager_nom} : ${STATUT_LABELS[ancien]} -> ${STATUT_LABELS[statut]}`;
-    if (commentaire) texte += ` — ${commentaire}`;
-    await dossierRepository.addSuivi(piece.dossier_id, user, texte, true);
-    await logAcces(user, "UPDATE_STATUT", "dossier_pieces", pieceId, { ancien, statut }, ip);
+    const updated = await dossierRepository.updatePieceStatut(pieceId, entry.statut);
+    const etape = await dossierRepository.addEtape(pieceId, {
+      libelle: entry.libelle,
+      statut_equivalent: entry.statut,
+      code_legacy: code,
+    });
+    await logAcces(user, "UPDATE_ETAPE", "dossier_pieces", pieceId, { code, libelle: entry.libelle }, ip);
 
     return {
       piece: updated,
-      suggestNotification: statut === "arrive" && !updated.notifie,
+      etape,
+      suggestNotification: entry.statut === "arrive" && !updated.notifie,
     };
   },
 

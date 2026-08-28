@@ -2,6 +2,7 @@ require("dotenv").config({ path: require("path").resolve(__dirname, "../../../.e
 const path = require("path");
 const XLSX = require("xlsx");
 const { pool, SCHEMA_NAME, setupDb } = require("../config/pg_db");
+const { ETAPE_LABELS: STEP_LABELS } = require("./dossierEtapes");
 
 // Frise chronologique des demandes CNI/Passeport, depuis ETAPES.xls (table
 // ALTO.ETAPE_DEMANDE) : une ligne par changement d'etat, avec sa date reelle.
@@ -24,27 +25,8 @@ const BATCH_SIZE = 500;
 // -> libelle FR + statut GRU equivalent (pour la couleur du point sur la frise).
 // Couvre les 19 combinaisons presentes sur les 405 137 etapes CNI/PAS/CNIPAS ;
 // tout code non reconnu est affiche tel quel (libelle = code brut) avec un avertissement.
-const STEP_LABELS = {
-  "TRAN|PREF|COMP": { libelle: "Transmis en préfecture", statut: "demande" },
-  "RTOU|PRET|PRET": { libelle: "Retour en mairie, prêt", statut: "arrive" },
-  "DEPO|NULL|COMP": { libelle: "Dossier déposé", statut: "demande" },
-  "RTIR|DEMA|RTIR": { libelle: "Retiré par le demandeur", statut: "recupere" },
-  "DEPO|CIPA|COMP": { libelle: "Dossier déposé (CNI + Passeport)", statut: "demande" },
-  "RTIR|MAND|RTIR": { libelle: "Retiré par un mandataire", statut: "recupere" },
-  "RTOU|AJRN|AJRN": { libelle: "Retour, dossier ajourné", statut: "ajourne" },
-  "ACTU|AJRN|COMP": { libelle: "Dossier actualisé, ajourné", statut: "ajourne" },
-  "RELN|TELE|PRET": { libelle: "Relance téléphonique (dossier prêt)", statut: "arrive" },
-  "ACTU|INCP|COMP": { libelle: "Dossier actualisé, incomplet", statut: "ajourne" },
-  "ACTU|AJRN|INCP": { libelle: "Actualisation, ajourné, incomplet", statut: "ajourne" },
-  "ACTU|NCFM|NCFM": { libelle: "Actualisation, non conforme", statut: "ajourne" },
-  "TRAN|PREF|NCFM": { libelle: "Transmis en préfecture, non conforme", statut: "ajourne" },
-  "ACTU|COMP|INCP": { libelle: "Actualisation, dossier incomplet", statut: "ajourne" },
-  "RENV|NULL|RENV": { libelle: "Dossier renvoyé", statut: "ajourne" },
-  "RTIR|AUTR|RTIR": { libelle: "Retiré (autre)", statut: "recupere" },
-  "DEPO|NULL|INCP": { libelle: "Dossier déposé, incomplet", statut: "ajourne" },
-  "RTOU|REFU|REFU": { libelle: "Refusé", statut: "refuse" },
-  "RELN|TELE|RTIR": { libelle: "Relance téléphonique, retiré", statut: "recupere" },
-};
+// Catalogue partage avec l'appli (voir ./dossierEtapes.js), utilise aussi pour
+// le changement d'etat manuel depuis la fiche dossier.
 
 function cleanText(v) {
   if (v === null || v === undefined) return null;

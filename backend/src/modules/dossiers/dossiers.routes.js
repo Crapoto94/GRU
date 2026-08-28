@@ -83,6 +83,20 @@ router.get("/", async (req, res, next) => {
 
 /**
  * @openapi
+ * /api/v1/dossiers/etapes-catalogue:
+ *   get:
+ *     tags: [Dossiers]
+ *     summary: Catalogue des etapes possibles pour le changement d'etat (alimente la frise, pas le suivi)
+ *     responses:
+ *       200:
+ *         description: Liste des etapes (code, libelle, statut)
+ */
+router.get("/etapes-catalogue", (_req, res) => {
+  res.json(dossierService.getEtapeCatalog());
+});
+
+/**
+ * @openapi
  * /api/v1/dossiers/{id}:
  *   get:
  *     tags: [Dossiers]
@@ -224,7 +238,7 @@ router.post("/:id/suivi", async (req, res, next) => {
  * /api/v1/dossiers/pieces/{pieceId}/statut:
  *   patch:
  *     tags: [Dossiers]
- *     summary: Changer le statut d'une piece (demande/ajourne/arrive/recupere)
+ *     summary: Ajouter une etape a la frise d'une piece (met aussi a jour son statut sommaire)
  *     parameters:
  *       - in: path
  *         name: pieceId
@@ -238,23 +252,20 @@ router.post("/:id/suivi", async (req, res, next) => {
  *         application/json:
  *           schema:
  *             type: object
- *             required: [statut]
+ *             required: [code]
  *             properties:
- *               statut:
+ *               code:
  *                 type: string
- *                 enum: [demande, ajourne, arrive, recupere, refuse]
- *               commentaire:
- *                 type: string
+ *                 description: Code de l'etape (voir /etapes-catalogue)
  *     responses:
  *       200:
- *         description: Piece mise a jour, avec suggestion de notification si passage a "arrive"
+ *         description: Piece mise a jour + etape ajoutee a la frise, avec suggestion de notification si passage a "arrive"
  */
 router.patch("/pieces/:pieceId/statut", async (req, res, next) => {
   try {
     const result = await dossierService.updateStatut(
       req.params.pieceId,
-      req.body.statut,
-      req.body.commentaire,
+      req.body.code,
       req.user?.login || "system",
       req.ip
     );

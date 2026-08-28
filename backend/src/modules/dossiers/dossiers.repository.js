@@ -97,6 +97,16 @@ const dossierRepository = {
     return db.get(`${PIECE_SELECT} WHERE p.id = $1`, [id]);
   },
 
+  async addEtape(dossierPieceId, { libelle, statut_equivalent, code_legacy }) {
+    const result = await db.run(
+      `INSERT INTO ${ETAPES} (dossier_piece_id, ordre, date_etape, libelle, statut_equivalent, code_legacy)
+       VALUES ($1, COALESCE((SELECT MAX(ordre) FROM ${ETAPES} WHERE dossier_piece_id = $1), 0) + 1, NOW(), $2, $3, $4)
+       RETURNING *`,
+      [dossierPieceId, libelle, statut_equivalent, code_legacy]
+    );
+    return result.rows[0];
+  },
+
   async updatePieceStatut(id, statut) {
     const extra =
       statut === "arrive" ? `, date_arrivee = NOW()` : statut === "recupere" ? `, date_recuperation = NOW()` : "";

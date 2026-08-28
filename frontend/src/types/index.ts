@@ -146,6 +146,12 @@ export type TypePiece = "CNI" | "Passeport";
 export type StatutPiece = "demande" | "ajourne" | "arrive" | "recupere" | "refuse";
 export type CanalNotification = "sms" | "email" | "both";
 
+export interface EtapeCatalogueItem {
+  code: string;
+  libelle: string;
+  statut: StatutPiece;
+}
+
 export interface DossierPieceEtape {
   id: string;
   dossier_piece_id: string;

@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { Usager, Template, Attestation, PaginatedResponse, Dossier, DossierPiece, DossierSuivi, DossierNotificationLog, DossierListItem, Logement, TypeLogement, ConservationRegle, AdaLegacy, ListeReference, ListeValeur, RgpdAlerteUsager } from "../types";
+import type { Usager, Template, Attestation, PaginatedResponse, Dossier, DossierPiece, DossierPieceEtape, EtapeCatalogueItem, DossierSuivi, DossierNotificationLog, DossierListItem, Logement, TypeLogement, ConservationRegle, AdaLegacy, ListeReference, ListeValeur, RgpdAlerteUsager } from "../types";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "",
@@ -119,6 +119,7 @@ export const dossiersApi = {
     offset?: number;
   }) => api.get<PaginatedResponse<DossierListItem>>("/api/v1/dossiers", { params }),
   getById: (id: string) => api.get<Dossier>(`/api/v1/dossiers/${id}`),
+  etapesCatalogue: () => api.get<EtapeCatalogueItem[]>("/api/v1/dossiers/etapes-catalogue"),
   create: (data: {
     lignes: Array<{
       usager_id: string;
@@ -131,10 +132,10 @@ export const dossiersApi = {
   remove: (id: string) => api.delete(`/api/v1/dossiers/${id}`),
   addSuivi: (dossierId: string, commentaire: string) =>
     api.post<DossierSuivi>(`/api/v1/dossiers/${dossierId}/suivi`, { commentaire }),
-  updateStatut: (pieceId: string, statut: string, commentaire?: string) =>
-    api.patch<{ piece: DossierPiece; suggestNotification: boolean }>(
+  updateStatut: (pieceId: string, code: string) =>
+    api.patch<{ piece: DossierPiece; etape: DossierPieceEtape; suggestNotification: boolean }>(
       `/api/v1/dossiers/pieces/${pieceId}/statut`,
-      { statut, commentaire }
+      { code }
     ),
   updatePiece: (pieceId: string, data: Partial<DossierPiece>) =>
     api.put<DossierPiece>(`/api/v1/dossiers/pieces/${pieceId}`, data),
