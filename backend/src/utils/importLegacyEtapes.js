@@ -111,8 +111,18 @@ async function importEtapes() {
 
     console.log("[IMPORT ETAPES] lecture:", ETAPES_FILE);
     const wb = XLSX.readFile(ETAPES_FILE);
-    const rows = XLSX.utils.sheet_to_json(wb.Sheets["ALTO.ETAPE_DEMANDE"], { defval: "" });
-    console.log(`[IMPORT ETAPES] ETAPES: ${rows.length} lignes (tous types)`);
+    // Le nom de la feuille varie selon l'export (ALTO.ETAPE_DEMANDE,
+    // ALTOIVR.ETAPE_DEMANDE...) : on la retrouve par son entete plutot que
+    // de figer un nom.
+    const sheetName = wb.SheetNames.find((n) => {
+      const ws = wb.Sheets[n];
+      if (!ws || !ws["!ref"]) return false;
+      const first = XLSX.utils.sheet_to_json(ws, { header: 1, range: 0, defval: "" })[0] || [];
+      return first.includes("ID_DEMANDE") && first.includes("CODE_ETAT_DEMANDE");
+    });
+    if (!sheetName) throw new Error(`${ETAPES_FILE}: aucune feuille avec les colonnes ID_DEMANDE/CODE_ETAT_DEMANDE`);
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: "" });
+    console.log(`[IMPORT ETAPES] ETAPES: feuille "${sheetName}", ${rows.length} lignes (tous types)`);
 
     const byDemande = new Map();
     for (const r of rows) {

@@ -102,17 +102,43 @@ function statutOf(row) {
   return s;
 }
 
+// Le classeur ALTO depasse la limite de 65 536 lignes/feuille du format .xls :
+// l'export se scinde en une feuille "primaire" nommee dynamiquement (avec
+// entete, ex: ALTO.DEMANDE ou ALTOIVR.DEMANDE selon l'export) suivie d'autant
+// de feuilles "SheetN" sans entete que necessaire, dans le meme ordre de
+// colonnes. On ne doit donc jamais figer le nom de la feuille primaire.
+function findHeaderSheet(wb, keyCol) {
+  for (const name of wb.SheetNames) {
+    const ws = wb.Sheets[name];
+    if (!ws || !ws["!ref"]) continue;
+    const first = XLSX.utils.sheet_to_json(ws, { header: 1, range: 0, defval: "" })[0] || [];
+    if (first.includes(keyCol)) return name;
+  }
+  return null;
+}
+
 function readDemandesFile(file) {
   const wb = XLSX.readFile(file);
-  const rowsA = XLSX.utils.sheet_to_json(wb.Sheets["ALTO.DEMANDE"], { defval: "" });
-  const rawB = XLSX.utils.sheet_to_json(wb.Sheets["Sheet1"], { header: 1, defval: "", range: 1 });
-  const rowsB = rawB
-    .filter((r) => r.length > 1)
-    .map((r) => {
-      const o = {};
-      DEMANDE_COLS.forEach((c, i) => (o[c] = r[i] === undefined ? "" : r[i]));
-      return o;
-    });
+  const primaryName = findHeaderSheet(wb, "ID_DEMANDEUR");
+  if (!primaryName) throw new Error(`${file}: aucune feuille avec la colonne ID_DEMANDEUR`);
+  const rowsA = XLSX.utils.sheet_to_json(wb.Sheets[primaryName], { defval: "" });
+
+  let rowsB = [];
+  for (const name of wb.SheetNames) {
+    if (name === primaryName || name === "SQL") continue;
+    // Chaque feuille complementaire commence par une ligne vide (artefact de
+    // l'export), les donnees demarrent en ligne 2.
+    const raw = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, defval: "", range: 1 });
+    const mapped = raw
+      .filter((r) => r.length > 1)
+      .map((r) => {
+        const o = {};
+        DEMANDE_COLS.forEach((c, i) => (o[c] = r[i] === undefined ? "" : r[i]));
+        return o;
+      });
+    rowsB = rowsB.concat(mapped);
+  }
+  console.log(`[IMPORT CNI/PAS] DEMANDES: feuille primaire "${primaryName}" (${rowsA.length} lignes) + ${wb.SheetNames.length - 2} feuille(s) complementaire(s) (${rowsB.length} lignes)`);
   return rowsA.concat(rowsB);
 }
 
