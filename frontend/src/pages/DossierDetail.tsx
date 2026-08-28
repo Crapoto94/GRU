@@ -11,6 +11,7 @@ const STATUT_LABELS: Record<StatutPiece, string> = {
   ajourne: "Ajourné",
   arrive: "Arrivé",
   recupere: "Récupéré",
+  refuse: "Refusé",
 };
 
 const STATUT_COLORS: Record<StatutPiece, string> = {
@@ -18,6 +19,7 @@ const STATUT_COLORS: Record<StatutPiece, string> = {
   ajourne: "bg-amber-100 text-amber-700",
   arrive: "bg-green-100 text-green-700",
   recupere: "bg-blue-100 text-blue-700",
+  refuse: "bg-rose-100 text-rose-700",
 };
 
 export default function DossierDetail() {

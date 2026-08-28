@@ -5,8 +5,8 @@ const { logAcces } = require("../../utils/logger");
 const { typePieceLabel, renderTemplate, getDossierMessageTemplates } = require("../../utils/messageTemplates");
 
 const TYPES_PIECE = ["CNI", "Passeport"];
-const STATUTS = ["demande", "ajourne", "arrive", "recupere"];
-const STATUT_LABELS = { demande: "Demandé", ajourne: "Ajourné", arrive: "Arrivé", recupere: "Récupéré" };
+const STATUTS = ["demande", "ajourne", "arrive", "recupere", "refuse"];
+const STATUT_LABELS = { demande: "Demandé", ajourne: "Ajourné", arrive: "Arrivé", recupere: "Récupéré", refuse: "Refusé" };
 const CANAUX = ["sms", "email", "both"];
 
 const dossierService = {

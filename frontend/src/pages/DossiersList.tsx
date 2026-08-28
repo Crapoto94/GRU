@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Search, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ChevronsUpDown, Users, IdCard, Clock } from "lucide-react";
+import { Plus, Search, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ChevronsUpDown, Users, IdCard, Clock, SlidersHorizontal, X } from "lucide-react";
 import toast from "react-hot-toast";
 import { formatNom, formatPrenom } from "../utils/format";
 import { dossiersApi } from "../services/api";
@@ -11,6 +11,7 @@ const STATUT_LABELS: Record<StatutPiece, string> = {
   ajourne: "Ajourné",
   arrive: "Arrivé",
   recupere: "Récupéré",
+  refuse: "Refusé",
 };
 
 const STATUT_COLORS: Record<StatutPiece, string> = {
@@ -18,6 +19,7 @@ const STATUT_COLORS: Record<StatutPiece, string> = {
   ajourne: "bg-amber-100 text-amber-700",
   arrive: "bg-green-100 text-green-700",
   recupere: "bg-blue-100 text-blue-700",
+  refuse: "bg-rose-100 text-rose-700",
 };
 
 const COLUMNS: Array<{ key: string; label: string; align?: "center" | "right" }> = [
@@ -26,8 +28,28 @@ const COLUMNS: Array<{ key: string; label: string; align?: "center" | "right" }>
   { key: "pieces", label: "Pieces", align: "center" },
   { key: "statuts", label: "Statuts" },
   { key: "attente", label: "En attente depuis", align: "center" },
-  { key: "cree_le", label: "Cree le" },
+  { key: "date_demande", label: "Date de demande" },
 ];
+
+const ADVANCED_FIELDS: Array<{ key: keyof AdvancedSearch; label: string; placeholder: string }> = [
+  { key: "nom", label: "Nom", placeholder: "Nom" },
+  { key: "prenom", label: "Prenom", placeholder: "Prenom" },
+  { key: "telephone", label: "Numero de telephone", placeholder: "06..." },
+  { key: "adresse", label: "Adresse", placeholder: "Rue, numero..." },
+  { key: "code_postal", label: "Code postal", placeholder: "94200" },
+  { key: "ville", label: "Ville", placeholder: "Ville" },
+];
+
+type AdvancedSearch = {
+  nom: string;
+  prenom: string;
+  telephone: string;
+  adresse: string;
+  code_postal: string;
+  ville: string;
+};
+
+const EMPTY_ADVANCED: AdvancedSearch = { nom: "", prenom: "", telephone: "", adresse: "", code_postal: "", ville: "" };
 
 function joursDepuis(dateStr: string) {
   const diffMs = Date.now() - new Date(dateStr).getTime();
@@ -41,11 +63,16 @@ export default function DossiersList() {
   const [search, setSearch] = useState("");
   const [statut, setStatut] = useState("");
   const [typePiece, setTypePiece] = useState("");
-  const [sort, setSort] = useState("cree_le");
+  const [showClosed, setShowClosed] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [advanced, setAdvanced] = useState<AdvancedSearch>(EMPTY_ADVANCED);
+  const [sort, setSort] = useState("date_demande");
   const [order, setOrder] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(false);
   const limit = 20;
+
+  const advancedActive = Object.values(advanced).some((v) => v.trim() !== "");
 
   const load = async () => {
     setLoading(true);
@@ -54,6 +81,13 @@ export default function DossiersList() {
         search,
         statut: statut || undefined,
         type_piece: typePiece || undefined,
+        nom: advanced.nom || undefined,
+        prenom: advanced.prenom || undefined,
+        telephone: advanced.telephone || undefined,
+        adresse: advanced.adresse || undefined,
+        code_postal: advanced.code_postal || undefined,
+        ville: advanced.ville || undefined,
+        only_pending: !showClosed,
         sort,
         order,
         limit,
@@ -71,7 +105,7 @@ export default function DossiersList() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, statut, typePiece, sort, order, page]);
+  }, [search, statut, typePiece, showClosed, advanced, sort, order, page]);
 
   const toggleSort = (key: string) => {
     if (sort === key) {
@@ -86,6 +120,16 @@ export default function DossiersList() {
   const sortIcon = (key: string) => {
     if (sort !== key) return <ChevronsUpDown size={12} className="text-gray-300" />;
     return order === "asc" ? <ChevronUp size={12} /> : <ChevronDown size={12} />;
+  };
+
+  const setAdvancedField = (key: keyof AdvancedSearch, value: string) => {
+    setAdvanced((prev) => ({ ...prev, [key]: value }));
+    setPage(0);
+  };
+
+  const resetAdvanced = () => {
+    setAdvanced(EMPTY_ADVANCED);
+    setPage(0);
   };
 
   const totalPages = Math.ceil(total / limit);
@@ -103,36 +147,94 @@ export default function DossiersList() {
         </button>
       </div>
 
-      <div className="flex items-center gap-4 flex-wrap">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-          <input
-            type="text"
-            placeholder="Rechercher un usager..."
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(0); }}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ville-primary focus:border-transparent"
-          />
+      <div className="space-y-3">
+        <div className="flex items-center gap-4 flex-wrap">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+            <input
+              type="text"
+              placeholder="Rechercher un usager..."
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ville-primary focus:border-transparent"
+            />
+          </div>
+          <button
+            onClick={() => setShowAdvanced((v) => !v)}
+            className={`relative flex items-center gap-2 px-3 py-2 border rounded-lg text-sm transition ${
+              showAdvanced || advancedActive
+                ? "border-ville-primary text-ville-primary bg-blue-50"
+                : "border-gray-300 text-gray-600 hover:bg-gray-50"
+            }`}
+            title="Recherche avancee"
+          >
+            <SlidersHorizontal size={16} />
+            Recherche avancee
+            {showAdvanced ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            {advancedActive && !showAdvanced && (
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-ville-primary" />
+            )}
+          </button>
+          <select
+            value={statut}
+            onChange={(e) => { setStatut(e.target.value); setPage(0); }}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+          >
+            <option value="">Tous les statuts</option>
+            {(Object.keys(STATUT_LABELS) as StatutPiece[]).map((s) => (
+              <option key={s} value={s}>{STATUT_LABELS[s]}</option>
+            ))}
+          </select>
+          <select
+            value={typePiece}
+            onChange={(e) => { setTypePiece(e.target.value); setPage(0); }}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+          >
+            <option value="">Toutes les pieces</option>
+            <option value="CNI">CNI</option>
+            <option value="Passeport">Passeport</option>
+          </select>
+          <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer whitespace-nowrap">
+            <input
+              type="checkbox"
+              checked={showClosed}
+              onChange={(e) => { setShowClosed(e.target.checked); setPage(0); }}
+              className="rounded"
+            />
+            Afficher les dossiers cloturés (récupérés / refusés)
+          </label>
         </div>
-        <select
-          value={statut}
-          onChange={(e) => { setStatut(e.target.value); setPage(0); }}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-        >
-          <option value="">Tous les statuts</option>
-          {(Object.keys(STATUT_LABELS) as StatutPiece[]).map((s) => (
-            <option key={s} value={s}>{STATUT_LABELS[s]}</option>
-          ))}
-        </select>
-        <select
-          value={typePiece}
-          onChange={(e) => { setTypePiece(e.target.value); setPage(0); }}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-        >
-          <option value="">Toutes les pieces</option>
-          <option value="CNI">CNI</option>
-          <option value="Passeport">Passeport</option>
-        </select>
+
+        {showAdvanced && (
+          <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {ADVANCED_FIELDS.map((f) => (
+                <div key={f.key}>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">{f.label}</label>
+                  <input
+                    type="text"
+                    value={advanced[f.key]}
+                    placeholder={f.placeholder}
+                    onChange={(e) => setAdvancedField(f.key, e.target.value)}
+                    className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-ville-primary focus:border-transparent"
+                  />
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-gray-400">
+              Les champs renseignes se cumulent (recherche parmi tous les usagers du dossier, beneficiaires et destinataires).
+            </p>
+            {advancedActive && (
+              <button
+                onClick={resetAdvanced}
+                className="flex items-center gap-1 text-xs text-gray-500 hover:text-ville-primary"
+              >
+                <X size={12} />
+                Reinitialiser la recherche avancee
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
@@ -205,6 +307,11 @@ export default function DossiersList() {
                           {d.nb_recupere} {STATUT_LABELS.recupere}
                         </span>
                       )}
+                      {d.nb_refuse > 0 && (
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUT_COLORS.refuse}`}>
+                          {d.nb_refuse} {STATUT_LABELS.refuse}
+                        </span>
+                      )}
                     </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-center">
@@ -218,7 +325,7 @@ export default function DossiersList() {
                     )}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-600">
-                    {new Date(d.created_at).toLocaleDateString("fr-FR")}
+                    {d.date_demande ? new Date(d.date_demande).toLocaleDateString("fr-FR") : "-"}
                   </td>
                   <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                     <button

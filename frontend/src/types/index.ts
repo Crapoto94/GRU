@@ -143,7 +143,7 @@ export interface PaginatedResponse<T> {
 }
 
 export type TypePiece = "CNI" | "Passeport";
-export type StatutPiece = "demande" | "ajourne" | "arrive" | "recupere";
+export type StatutPiece = "demande" | "ajourne" | "arrive" | "recupere" | "refuse";
 export type CanalNotification = "sms" | "email" | "both";
 
 export interface DossierPiece {
@@ -211,6 +211,8 @@ export interface DossierListItem {
   nb_ajourne: number;
   nb_arrive: number;
   nb_recupere: number;
+  nb_refuse: number;
+  date_demande: string | null;
   date_demande_attente: string | null;
 }
 
@@ -224,4 +226,17 @@ export interface ConservationRegle {
   description: string | null;
   actif: boolean;
   updated_at: string | null;
+}
+
+export interface RgpdAlerteUsager {
+  id: string;
+  nom: string;
+  prenom: string;
+  email: string | null;
+  telephone: string | null;
+  mobile: string | null;
+  ville: string | null;
+  dernier_evenement: string;
+  jours_ecoules: number;
+  duree_conservation_mois: number;
 }

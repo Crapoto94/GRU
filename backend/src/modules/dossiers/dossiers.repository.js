@@ -150,12 +150,17 @@ const dossierRepository = {
     return db.all(`SELECT * FROM ${NOTIFS} WHERE dossier_piece_id = $1 ORDER BY created_at DESC`, [pieceId]);
   },
 
-  async findDossiersList({ statut, type_piece, search, sort, order, limit = 50, offset = 0 } = {}) {
+  async findDossiersList({
+    statut, type_piece, search, nom, prenom, telephone, adresse, code_postal, ville,
+    only_pending, sort, order, limit = 50, offset = 0,
+  } = {}) {
     const params = [];
     let matchWhere = "WHERE 1=1";
     if (statut) {
       params.push(statut);
       matchWhere += ` AND p.statut = $${params.length}`;
+    } else if (only_pending) {
+      matchWhere += ` AND p.statut NOT IN ('recupere','refuse')`;
     }
     if (type_piece) {
       params.push(type_piece);
@@ -165,12 +170,46 @@ const dossierRepository = {
       params.push(`%${search}%`, `%${search}%`);
       matchWhere += ` AND (u.nom ILIKE $${params.length - 1} OR u.prenom ILIKE $${params.length})`;
     }
+    if (nom) {
+      params.push(`%${nom}%`);
+      matchWhere += ` AND u.nom ILIKE $${params.length}`;
+    }
+    if (prenom) {
+      params.push(`%${prenom}%`);
+      matchWhere += ` AND u.prenom ILIKE $${params.length}`;
+    }
+    if (telephone) {
+      params.push(`%${telephone}%`);
+      matchWhere += ` AND (u.telephone ILIKE $${params.length} OR u.mobile ILIKE $${params.length})`;
+    }
+    if (adresse) {
+      params.push(`%${adresse}%`);
+      matchWhere += ` AND (u.adresse ILIKE $${params.length} OR u.complement_adresse ILIKE $${params.length})`;
+    }
+    if (code_postal) {
+      params.push(`${code_postal}%`);
+      matchWhere += ` AND u.code_postal ILIKE $${params.length}`;
+    }
+    if (ville) {
+      params.push(`%${ville}%`);
+      matchWhere += ` AND u.ville ILIKE $${params.length}`;
+    }
 
+    // Une demande met en jeu jusqu'a 2 personnes par piece : le beneficiaire
+    // (p.usager_id, a qui la piece est destinee) et le destinataire
+    // (p.destinataire_usager_id, qui depose/recupere si different). La
+    // recherche et la liste des "usagers" du dossier doivent couvrir les deux
+    // roles, pas seulement le beneficiaire.
     const matchingCte = `
       matching_dossiers AS (
-        SELECT DISTINCT p.dossier_id
+        SELECT p.dossier_id
         FROM ${PIECES} p
-        JOIN ${USAGERS} u ON p.usager_id = u.id
+        JOIN ${USAGERS} u ON u.id = p.usager_id
+        ${matchWhere}
+        UNION
+        SELECT p.dossier_id
+        FROM ${PIECES} p
+        JOIN ${USAGERS} u ON u.id = p.destinataire_usager_id
         ${matchWhere}
       )
     `;
@@ -180,23 +219,39 @@ const dossierRepository = {
       personnes: "nb_usagers",
       pieces: "nb_pieces",
       statuts: "nb_arrive",
-      cree_le: "d.created_at",
+      date_demande: "date_demande",
       attente: "date_demande_attente",
     };
-    const sortColumn = SORT_COLUMNS[sort] || SORT_COLUMNS.cree_le;
+    const sortColumn = SORT_COLUMNS[sort] || SORT_COLUMNS.date_demande;
     const sortDir = order === "asc" ? "ASC" : "DESC";
     const nullsClause = sort === "attente" ? "NULLS LAST" : "";
 
     const query = `
       WITH ${matchingCte}
       SELECT d.id as dossier_id, d.created_at, d.updated_at, d.created_by,
-        COUNT(DISTINCT p.usager_id)::int as nb_usagers,
+        (
+          SELECT COUNT(DISTINCT x) FROM (
+            SELECT p2.usager_id x FROM ${PIECES} p2 WHERE p2.dossier_id = d.id
+            UNION
+            SELECT p2.destinataire_usager_id x FROM ${PIECES} p2 WHERE p2.dossier_id = d.id AND p2.destinataire_usager_id IS NOT NULL
+          ) t
+        )::int as nb_usagers,
         COUNT(p.id)::int as nb_pieces,
-        jsonb_agg(DISTINCT jsonb_build_object('id', u.id, 'nom', u.nom, 'prenom', u.prenom)) as usagers,
+        (
+          SELECT jsonb_agg(DISTINCT jsonb_build_object('id', uu.id, 'nom', uu.nom, 'prenom', uu.prenom))
+          FROM ${USAGERS} uu
+          WHERE uu.id IN (
+            SELECT p2.usager_id FROM ${PIECES} p2 WHERE p2.dossier_id = d.id
+            UNION
+            SELECT p2.destinataire_usager_id FROM ${PIECES} p2 WHERE p2.dossier_id = d.id AND p2.destinataire_usager_id IS NOT NULL
+          )
+        ) as usagers,
         COUNT(*) FILTER (WHERE p.statut = 'demande')::int as nb_demande,
         COUNT(*) FILTER (WHERE p.statut = 'ajourne')::int as nb_ajourne,
         COUNT(*) FILTER (WHERE p.statut = 'arrive')::int as nb_arrive,
         COUNT(*) FILTER (WHERE p.statut = 'recupere')::int as nb_recupere,
+        COUNT(*) FILTER (WHERE p.statut = 'refuse')::int as nb_refuse,
+        MIN(p.date_demande) as date_demande,
         MIN(p.date_demande) FILTER (WHERE p.statut IN ('demande','ajourne')) as date_demande_attente
       FROM matching_dossiers md
       JOIN ${DOSSIERS} d ON d.id = md.dossier_id

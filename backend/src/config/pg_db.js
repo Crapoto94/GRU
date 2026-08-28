@@ -412,6 +412,11 @@ async function setupDb() {
         IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'logements_type_logement_check') THEN
           ALTER TABLE "${SCHEMA_NAME}".logements ADD CONSTRAINT logements_type_logement_check CHECK (type_logement IN ('principal','secondaire'));
         END IF;
+        IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'dossier_pieces_statut_check') THEN
+          ALTER TABLE "${SCHEMA_NAME}".dossier_pieces DROP CONSTRAINT dossier_pieces_statut_check;
+        END IF;
+        ALTER TABLE "${SCHEMA_NAME}".dossier_pieces ADD CONSTRAINT dossier_pieces_statut_check
+          CHECK (statut IN ('demande','ajourne','arrive','recupere','refuse'));
       END $$;
     `);
 

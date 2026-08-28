@@ -13,7 +13,7 @@ const dossierService = require("./dossiers.service");
  *         name: statut
  *         schema:
  *           type: string
- *           enum: [demande, ajourne, arrive, recupere]
+ *           enum: [demande, ajourne, arrive, recupere, refuse]
  *       - in: query
  *         name: type_piece
  *         schema:
@@ -23,17 +23,53 @@ const dossierService = require("./dossiers.service");
  *         name: search
  *         schema:
  *           type: string
+ *       - in: query
+ *         name: nom
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: prenom
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: telephone
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: adresse
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: code_postal
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: ville
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: only_pending
+ *         description: Si vrai (defaut cote client), n'affiche que les dossiers ayant au moins une piece non cloturee (ni recupere, ni refuse)
+ *         schema:
+ *           type: boolean
  *     responses:
  *       200:
  *         description: Liste des pieces
  */
 router.get("/", async (req, res, next) => {
   try {
-    const { statut, type_piece, search, sort, order, limit, offset } = req.query;
+    const { statut, type_piece, search, nom, prenom, telephone, adresse, code_postal, ville, only_pending, sort, order, limit, offset } = req.query;
     const result = await dossierService.list({
       statut,
       type_piece,
       search,
+      nom,
+      prenom,
+      telephone,
+      adresse,
+      code_postal,
+      ville,
+      only_pending: only_pending === "true" || only_pending === "1",
       sort,
       order,
       limit: parseInt(limit, 10) || 50,
@@ -206,7 +242,7 @@ router.post("/:id/suivi", async (req, res, next) => {
  *             properties:
  *               statut:
  *                 type: string
- *                 enum: [demande, ajourne, arrive, recupere]
+ *                 enum: [demande, ajourne, arrive, recupere, refuse]
  *               commentaire:
  *                 type: string
  *     responses:

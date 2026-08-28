@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { Usager, Template, Attestation, PaginatedResponse, Dossier, DossierPiece, DossierSuivi, DossierNotificationLog, DossierListItem, Logement, TypeLogement, ConservationRegle, AdaLegacy, ListeReference, ListeValeur } from "../types";
+import type { Usager, Template, Attestation, PaginatedResponse, Dossier, DossierPiece, DossierSuivi, DossierNotificationLog, DossierListItem, Logement, TypeLogement, ConservationRegle, AdaLegacy, ListeReference, ListeValeur, RgpdAlerteUsager } from "../types";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "",
@@ -96,6 +96,13 @@ export const dossiersApi = {
     statut?: string;
     type_piece?: string;
     search?: string;
+    nom?: string;
+    prenom?: string;
+    telephone?: string;
+    adresse?: string;
+    code_postal?: string;
+    ville?: string;
+    only_pending?: boolean;
     sort?: string;
     order?: "asc" | "desc";
     limit?: number;
@@ -139,6 +146,9 @@ export const rgpdApi = {
   listConservation: () => api.get<ConservationRegle[]>("/api/v1/rgpd/conservation"),
   updateConservation: (cle: string, data: { conservation_mois: number; description?: string }) =>
     api.put<ConservationRegle>(`/api/v1/rgpd/conservation/${encodeURIComponent(cle)}`, data),
+  listAlertes: () => api.get<RgpdAlerteUsager[]>("/api/v1/rgpd/alertes"),
+  archiver: (usagerIds: string[], motif?: string) =>
+    api.post<{ count: number }>("/api/v1/rgpd/archiver", { usager_ids: usagerIds, motif }),
 };
 
 export const listesApi = {
