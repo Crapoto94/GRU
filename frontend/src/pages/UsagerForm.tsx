@@ -8,14 +8,6 @@ import type { Usager } from "../types";
 
 const SITUATIONS = ["Celibataire", "Marie(e)", "Divorce(e)", "Veuf(ve)", "Pacs(e)", "Concubin(e)"];
 const CIVILITES = ["M.", "Mme", "Mx"];
-const PAYS = [
-  "France","Allemagne","Algerie","Belgique","Bresil","Burkina Faso","Cameroun",
-  "Canada","Chine","Cote d'Ivoire","Espagne","Etats-Unis","Gabon","Grece",
-  "Haiti","Hongrie","Inde","Irak","Irlande","Italie","Japon","Kenya",
-  "Liban","Madagascar","Maroc","Maurice","Mali","Mexique","Niger",
-  "Nigeria","Pays-Bas","Perou","Pologne","Portugal","Royaume-Uni",
-  "Roumanie","Russie","Senegal","Suisse","Tunisie","Turquie","Ukraine",
-].sort();
 
 interface AdresseSuggestion {
   label: string;
@@ -33,8 +25,17 @@ interface CommuneSuggestion {
 }
 
 interface PaysSuggestion {
-  name: string;
+  name: { common: string; official?: string };
   cca2: string;
+}
+
+async function fetchPaysSuggestions(q: string): Promise<{ label: string; value: string }[]> {
+  const res = await fetch(`https://restcountries.com/v3.1/name/${encodeURIComponent(q)}?fields=name,cca2`);
+  if (!res.ok) return [];
+  const data: PaysSuggestion[] = await res.json();
+  return data
+    .filter((p) => p.name?.common)
+    .map((p) => ({ label: p.name.common, value: p.name.common }));
 }
 
 function AutocompleteField({
@@ -490,14 +491,7 @@ export default function UsagerForm() {
               value={form.pays_naissance || "France"}
               onChange={set("pays_naissance")}
               onSelect={set("pays_naissance")}
-              fetchSuggestions={async (q) => {
-                const res = await fetch(`https://restcountries.com/v3.1/name/${encodeURIComponent(q)}?fields=name,cca2`);
-                const data: PaysSuggestion[] = await res.json();
-                return data.map((p) => ({
-                  label: p.name,
-                  value: p.name,
-                }));
-              }}
+              fetchSuggestions={fetchPaysSuggestions}
               placeholder="Rechercher un pays..."
             />
             <div>
@@ -566,16 +560,14 @@ export default function UsagerForm() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
             <InputField label="Code postal" value={form.code_postal || ""} onChange={set("code_postal")} />
             <InputField label="Ville" value={form.ville || ""} onChange={set("ville")} />
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Pays</label>
-              <select
-                value={form.pays || "France"}
-                onChange={(e) => set("pays")(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-              >
-                {PAYS.map((p) => <option key={p} value={p}>{p}</option>)}
-              </select>
-            </div>
+            <AutocompleteField
+              label="Pays"
+              value={form.pays || "France"}
+              onChange={set("pays")}
+              onSelect={set("pays")}
+              fetchSuggestions={fetchPaysSuggestions}
+              placeholder="Rechercher un pays..."
+            />
           </div>
         </section>
 
