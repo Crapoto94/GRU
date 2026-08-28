@@ -83,31 +83,44 @@ const rgpdRepository = {
     const retentionMonths = rule?.conservation_mois ?? 60;
 
     // Find usagers whose latest event across all tables is older than retention period
-    // and who are not already archived
+    // and who are not already archived.
+    // Chaque source est pre-agregee une seule fois (GROUP BY usager_id) puis
+    // jointe, plutot que 3 sous-requetes correlees par usager : sur 100k+
+    // usagers, la version correlee prend plus d'une minute, celle-ci quelques
+    // dizaines de ms.
     return db.all(
-      `WITH latest_events AS (
+      `WITH att AS (
+        SELECT usager_id, MAX(date_generation) AS d FROM (
+          SELECT usager_id, date_generation FROM "${SCHEMA_NAME}".attestations
+          UNION ALL
+          SELECT usager2_id, date_generation FROM "${SCHEMA_NAME}".attestations WHERE usager2_id IS NOT NULL
+          UNION ALL
+          SELECT usager3_id, date_generation FROM "${SCHEMA_NAME}".attestations WHERE usager3_id IS NOT NULL
+        ) x
+        GROUP BY usager_id
+      ),
+      dp AS (
+        SELECT usager_id, MAX(date_demande) AS d
+        FROM "${SCHEMA_NAME}".dossier_pieces
+        GROUP BY usager_id
+      ),
+      hist AS (
+        SELECT usager_id, MAX(date_enreg) AS d
+        FROM "${SCHEMA_NAME}".usagers_historique
+        GROUP BY usager_id
+      ),
+      latest_events AS (
         SELECT u.id, u.nom, u.prenom, u.email, u.telephone, u.mobile, u.ville,
                GREATEST(
-                 COALESCE((
-                   SELECT MAX(a.date_generation)
-                   FROM "${SCHEMA_NAME}".attestations a
-                   WHERE a.usager_id = u.id
-                      OR a.usager2_id = u.id
-                      OR a.usager3_id = u.id
-                 ), '1970-01-01'::timestamptz),
-                 COALESCE((
-                   SELECT MAX(dp.date_demande)::timestamptz
-                   FROM "${SCHEMA_NAME}".dossier_pieces dp
-                   WHERE dp.usager_id = u.id
-                 ), '1970-01-01'::timestamptz),
-                 COALESCE((
-                   SELECT MAX(uh.date_enreg)::timestamptz
-                   FROM "${SCHEMA_NAME}".usagers_historique uh
-                   WHERE uh.usager_id = u.id
-                 ), '1970-01-01'::timestamptz),
+                 COALESCE(att.d, '1970-01-01'::timestamptz),
+                 COALESCE(dp.d::timestamptz, '1970-01-01'::timestamptz),
+                 COALESCE(hist.d::timestamptz, '1970-01-01'::timestamptz),
                  COALESCE(u.updated_at, '1970-01-01'::timestamptz)
                ) AS dernier_evenement
         FROM "${SCHEMA_NAME}".usagers u
+        LEFT JOIN att ON att.usager_id = u.id
+        LEFT JOIN dp ON dp.usager_id = u.id
+        LEFT JOIN hist ON hist.usager_id = u.id
         WHERE u.archived = FALSE
       )
       SELECT id, nom, prenom, email, telephone, mobile, ville,
