@@ -13,8 +13,18 @@ api.interceptors.request.use((config) => {
 });
 
 export const usagersApi = {
-  list: (params?: { search?: string; archived?: boolean; limit?: number; offset?: number }) =>
-    api.get<PaginatedResponse<Usager>>("/api/v1/usagers", { params }),
+  list: (params?: {
+    search?: string;
+    nom?: string;
+    prenom?: string;
+    telephone?: string;
+    adresse?: string;
+    code_postal?: string;
+    ville?: string;
+    archived?: boolean;
+    limit?: number;
+    offset?: number;
+  }) => api.get<PaginatedResponse<Usager>>("/api/v1/usagers", { params }),
   getById: (id: string) => api.get<Usager>(`/api/v1/usagers/${id}`),
   create: (data: Partial<Usager>) => api.post<Usager>("/api/v1/usagers", data),
   update: (id: string, data: Partial<Usager>) => api.put<Usager>(`/api/v1/usagers/${id}`, data),

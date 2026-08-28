@@ -17,6 +17,30 @@ const { requireRole } = require("../../middleware/auth");
  *         schema:
  *           type: string
  *       - in: query
+ *         name: nom
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: prenom
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: telephone
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: adresse
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: code_postal
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: ville
+ *         schema:
+ *           type: string
+ *       - in: query
  *         name: archived
  *         schema:
  *           type: boolean
@@ -37,9 +61,15 @@ const { requireRole } = require("../../middleware/auth");
  */
 router.get("/", async (req, res, next) => {
   try {
-    const { search, archived, limit, offset } = req.query;
+    const { search, nom, prenom, telephone, adresse, code_postal, ville, archived, limit, offset } = req.query;
     const result = await usagerService.list({
       search,
+      nom,
+      prenom,
+      telephone,
+      adresse,
+      code_postal,
+      ville,
       archived: archived === "true",
       limit: parseInt(limit, 10) || 50,
       offset: parseInt(offset, 10) || 0,

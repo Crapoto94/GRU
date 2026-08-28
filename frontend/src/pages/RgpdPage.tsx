@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ShieldCheck, Save, Hourglass, RefreshCw, AlertTriangle, Archive } from "lucide-react";
 import toast from "react-hot-toast";
 import { rgpdApi } from "../services/api";
@@ -58,6 +58,10 @@ export default function RgpdPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    load();
+  }, []);
 
   const loadAlertes = async () => {
     setAlertesLoading(true);

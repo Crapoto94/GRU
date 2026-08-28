@@ -27,32 +27,55 @@ const usagerRepository = {
     );
   },
 
-  async findAll({ archived = false, search = "", limit = 50, offset = 0 } = {}) {
+  async findAll({
+    archived = false, search = "", nom, prenom, telephone, adresse, code_postal, ville,
+    limit = 50, offset = 0,
+  } = {}) {
     const ATTESTATIONS = `"${SCHEMA_NAME}".attestations`;
     const LOGEMENTS = `"${SCHEMA_NAME}".logements`;
-    let query = `SELECT u.*, u.adresse as "Adresse",
+
+    const params = [archived];
+    let where = `u.archived = $1`;
+    if (search) {
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
+      where += ` AND (u.nom ILIKE $${params.length - 4} OR u.prenom ILIKE $${params.length - 3} OR u.email ILIKE $${params.length - 2} OR u.telephone ILIKE $${params.length - 1} OR u.mobile ILIKE $${params.length})`;
+    }
+    if (nom) {
+      params.push(`%${nom}%`);
+      where += ` AND u.nom ILIKE $${params.length}`;
+    }
+    if (prenom) {
+      params.push(`%${prenom}%`);
+      where += ` AND u.prenom ILIKE $${params.length}`;
+    }
+    if (telephone) {
+      params.push(`%${telephone}%`);
+      where += ` AND (u.telephone ILIKE $${params.length} OR u.mobile ILIKE $${params.length})`;
+    }
+    if (adresse) {
+      params.push(`%${adresse}%`);
+      where += ` AND (u.adresse ILIKE $${params.length} OR u.complement_adresse ILIKE $${params.length})`;
+    }
+    if (code_postal) {
+      params.push(`${code_postal}%`);
+      where += ` AND u.code_postal ILIKE $${params.length}`;
+    }
+    if (ville) {
+      params.push(`%${ville}%`);
+      where += ` AND u.ville ILIKE $${params.length}`;
+    }
+
+    const rowsQuery = `SELECT u.*, u.adresse as "Adresse",
       (SELECT COUNT(*)::int FROM ${ATTESTATIONS} a
        WHERE a.usager_id = u.id OR a.usager2_id = u.id OR a.usager3_id = u.id
       ) as attestation_count,
       EXISTS(SELECT 1 FROM ${LOGEMENTS} l WHERE l.usager_id = u.id AND l.type_logement = 'principal') as has_logement_principal,
       EXISTS(SELECT 1 FROM ${LOGEMENTS} l WHERE l.usager_id = u.id AND l.type_logement = 'secondaire') as has_logement_secondaire
-      FROM ${TABLE} u WHERE u.archived = $1`;
-    const params = [archived];
-    if (search) {
-      params.push(`%${search}%`);
-      params.push(`%${search}%`);
-      params.push(`%${search}%`);
-      params.push(`%${search}%`);
-      params.push(`%${search}%`);
-      query += ` AND (u.nom ILIKE $${params.length - 4} OR u.prenom ILIKE $${params.length - 3} OR u.email ILIKE $${params.length - 2} OR u.telephone ILIKE $${params.length - 1} OR u.mobile ILIKE $${params.length})`;
-    }
-    query += ` ORDER BY lower(u.nom) ASC, lower(u.prenom) ASC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
-    params.push(limit, offset);
-    const rows = await db.all(query, params);
-    const countResult = await db.get(
-      `SELECT COUNT(*) as total FROM ${TABLE} WHERE archived = $1`,
-      [archived]
-    );
+      FROM ${TABLE} u WHERE ${where}
+      ORDER BY lower(u.nom) ASC, lower(u.prenom) ASC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+    const rows = await db.all(rowsQuery, [...params, limit, offset]);
+
+    const countResult = await db.get(`SELECT COUNT(*) as total FROM ${TABLE} u WHERE ${where}`, params);
     return { rows, total: parseInt(countResult.total, 10) };
   },
 

@@ -1,13 +1,33 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Search, Plus, Archive, RotateCcw, Trash2, ChevronLeft, ChevronRight, FileText, X, Download, UserSearch, Home, Building2 } from "lucide-react";
+import { Search, Plus, Archive, RotateCcw, Trash2, ChevronLeft, ChevronRight, FileText, X, Download, UserSearch, Home, Building2, SlidersHorizontal, ChevronDown, ChevronUp } from "lucide-react";
 import toast from "react-hot-toast";
 import { formatNom, formatPrenom } from "../utils/format";
 import { usagersApi, attestationsApi } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
 import LogementModal from "../components/LogementModal";
 import type { Usager, Attestation } from "../types";
+
+type AdvancedSearch = {
+  nom: string;
+  prenom: string;
+  telephone: string;
+  adresse: string;
+  code_postal: string;
+  ville: string;
+};
+
+const EMPTY_ADVANCED: AdvancedSearch = { nom: "", prenom: "", telephone: "", adresse: "", code_postal: "", ville: "" };
+
+const ADVANCED_FIELDS: Array<{ key: keyof AdvancedSearch; label: string; placeholder: string }> = [
+  { key: "nom", label: "Nom", placeholder: "Nom" },
+  { key: "prenom", label: "Prenom", placeholder: "Prenom" },
+  { key: "telephone", label: "Numero de telephone", placeholder: "06..." },
+  { key: "adresse", label: "Adresse", placeholder: "Rue, numero..." },
+  { key: "code_postal", label: "Code postal", placeholder: "94200" },
+  { key: "ville", label: "Ville", placeholder: "Ville" },
+];
 
 export default function UsagersList() {
   const navigate = useNavigate();
@@ -16,9 +36,13 @@ export default function UsagersList() {
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState("");
   const [showArchived, setShowArchived] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [advanced, setAdvanced] = useState<AdvancedSearch>(EMPTY_ADVANCED);
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(false);
   const limit = 20;
+
+  const advancedActive = Object.values(advanced).some((v) => v.trim() !== "");
 
   const [attestationsModal, setAttestationsModal] = useState<{ usager: Usager; attestations: Attestation[] } | null>(null);
   const [loadingAttestations, setLoadingAttestations] = useState(false);
@@ -35,7 +59,18 @@ export default function UsagersList() {
   const load = async () => {
     setLoading(true);
     try {
-      const res = await usagersApi.list({ search, archived: showArchived, limit, offset: page * limit });
+      const res = await usagersApi.list({
+        search,
+        nom: advanced.nom || undefined,
+        prenom: advanced.prenom || undefined,
+        telephone: advanced.telephone || undefined,
+        adresse: advanced.adresse || undefined,
+        code_postal: advanced.code_postal || undefined,
+        ville: advanced.ville || undefined,
+        archived: showArchived,
+        limit,
+        offset: page * limit,
+      });
       setUsagers(res.data.rows);
       setTotal(res.data.total);
     } catch {
@@ -47,7 +82,18 @@ export default function UsagersList() {
 
   useEffect(() => {
     load();
-  }, [search, showArchived, page]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, advanced, showArchived, page]);
+
+  const setAdvancedField = (key: keyof AdvancedSearch, value: string) => {
+    setAdvanced((prev) => ({ ...prev, [key]: value }));
+    setPage(0);
+  };
+
+  const resetAdvanced = () => {
+    setAdvanced(EMPTY_ADVANCED);
+    setPage(0);
+  };
 
   const handleArchive = async (id: string) => {
     if (!window.confirm("Archiver cet usager ?")) return;
@@ -183,26 +229,73 @@ export default function UsagersList() {
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-          <input
-            type="text"
-            placeholder="Rechercher un usager..."
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(0); }}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ville-primary focus:border-transparent"
-          />
+      <div className="space-y-3">
+        <div className="flex items-center gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+            <input
+              type="text"
+              placeholder="Rechercher un usager..."
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ville-primary focus:border-transparent"
+            />
+          </div>
+          <button
+            onClick={() => setShowAdvanced((v) => !v)}
+            className={`relative flex items-center gap-2 px-3 py-2 border rounded-lg text-sm transition ${
+              showAdvanced || advancedActive
+                ? "border-ville-primary text-ville-primary bg-blue-50"
+                : "border-gray-300 text-gray-600 hover:bg-gray-50"
+            }`}
+            title="Recherche avancee"
+          >
+            <SlidersHorizontal size={16} />
+            Recherche avancee
+            {showAdvanced ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            {advancedActive && !showAdvanced && (
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-ville-primary" />
+            )}
+          </button>
+          <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer whitespace-nowrap">
+            <input
+              type="checkbox"
+              checked={showArchived}
+              onChange={(e) => { setShowArchived(e.target.checked); setPage(0); }}
+              className="rounded"
+            />
+            Archives
+          </label>
         </div>
-        <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={showArchived}
-            onChange={(e) => { setShowArchived(e.target.checked); setPage(0); }}
-            className="rounded"
-          />
-          Archives
-        </label>
+
+        {showAdvanced && (
+          <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {ADVANCED_FIELDS.map((f) => (
+                <div key={f.key}>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">{f.label}</label>
+                  <input
+                    type="text"
+                    value={advanced[f.key]}
+                    placeholder={f.placeholder}
+                    onChange={(e) => setAdvancedField(f.key, e.target.value)}
+                    className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-ville-primary focus:border-transparent"
+                  />
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-gray-400">Les champs renseignes se cumulent.</p>
+            {advancedActive && (
+              <button
+                onClick={resetAdvanced}
+                className="flex items-center gap-1 text-xs text-gray-500 hover:text-ville-primary"
+              >
+                <X size={12} />
+                Reinitialiser la recherche avancee
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
