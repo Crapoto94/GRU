@@ -145,7 +145,7 @@ const attestationRepository = {
   async findDatesByUsagerAndTemplate(usagerId, templateId) {
     return db.all(
       `SELECT date_generation FROM ${TABLE_ATTESTATIONS}
-       WHERE template_id = $1 AND (usager_id = $2 OR usager2_id = $2 OR usager3_id = $2)
+       WHERE template_id = $1 AND usager_id = $2
        ORDER BY date_generation ASC`,
       [templateId, usagerId]
     );
