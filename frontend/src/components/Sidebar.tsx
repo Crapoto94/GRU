@@ -29,7 +29,7 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="w-64 bg-white border-r border-gray-200 min-h-screen p-4 flex flex-col">
+    <aside className="w-64 shrink-0 bg-white border-r border-gray-200 h-screen overflow-y-auto p-4 flex flex-col">
       <div className="mb-8 flex flex-col items-center text-center">
         <img src="/julto.jpg" alt="JULTO" className="w-24 h-24 rounded-xl object-cover mb-2" />
         <p className="text-xs text-gray-500">J'ai Un Lien pour Tout, Ouf !</p>

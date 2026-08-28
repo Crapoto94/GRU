@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Search, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ChevronsUpDown, Users, IdCard, Clock, SlidersHorizontal, X } from "lucide-react";
+import { Plus, Search, ChevronUp, ChevronDown, ChevronsUpDown, Users, IdCard, Clock, SlidersHorizontal, X } from "lucide-react";
 import toast from "react-hot-toast";
 import { formatNom, formatPrenom } from "../utils/format";
 import { dossiersApi } from "../services/api";
+import PaginationBar, { effectiveLimit } from "../components/PaginationBar";
 import type { DossierListItem, StatutPiece } from "../types";
 
 const STATUT_LABELS: Record<StatutPiece, string> = {
@@ -69,14 +70,15 @@ export default function DossiersList() {
   const [sort, setSort] = useState("date_demande");
   const [order, setOrder] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(0);
+  const [limit, setLimit] = useState(25);
   const [loading, setLoading] = useState(false);
-  const limit = 20;
 
   const advancedActive = Object.values(advanced).some((v) => v.trim() !== "");
 
   const load = async () => {
     setLoading(true);
     try {
+      const lim = effectiveLimit(limit);
       const res = await dossiersApi.list({
         search,
         statut: statut || undefined,
@@ -90,8 +92,8 @@ export default function DossiersList() {
         only_pending: !showClosed,
         sort,
         order,
-        limit,
-        offset: page * limit,
+        limit: lim,
+        offset: page * lim,
       });
       setDossiers(res.data.rows);
       setTotal(res.data.total);
@@ -105,7 +107,7 @@ export default function DossiersList() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, statut, typePiece, showClosed, advanced, sort, order, page]);
+  }, [search, statut, typePiece, showClosed, advanced, sort, order, page, limit]);
 
   const toggleSort = (key: string) => {
     if (sort === key) {
@@ -131,8 +133,6 @@ export default function DossiersList() {
     setAdvanced(EMPTY_ADVANCED);
     setPage(0);
   };
-
-  const totalPages = Math.ceil(total / limit);
 
   return (
     <div className="space-y-6">
@@ -238,6 +238,7 @@ export default function DossiersList() {
       </div>
 
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div className="overflow-x-scroll">
         <table className="w-full">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
@@ -340,29 +341,9 @@ export default function DossiersList() {
             )}
           </tbody>
         </table>
+        </div>
 
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between px-6 py-3 border-t border-gray-200 bg-gray-50">
-            <span className="text-sm text-gray-600">{total} dossier(s)</span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setPage(Math.max(0, page - 1))}
-                disabled={page === 0}
-                className="p-1 rounded hover:bg-gray-200 disabled:opacity-50"
-              >
-                <ChevronLeft size={16} />
-              </button>
-              <span className="text-sm text-gray-600">{page + 1} / {totalPages}</span>
-              <button
-                onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
-                disabled={page >= totalPages - 1}
-                className="p-1 rounded hover:bg-gray-200 disabled:opacity-50"
-              >
-                <ChevronRight size={16} />
-              </button>
-            </div>
-          </div>
-        )}
+        <PaginationBar total={total} limit={limit} onLimitChange={setLimit} page={page} onPageChange={setPage} label="dossier(s)" />
       </div>
     </div>
   );

@@ -59,9 +59,9 @@ export default function App() {
         path="/*"
         element={
           <ProtectedRoute>
-            <div className="flex min-h-screen">
+            <div className="flex h-screen overflow-hidden">
               <Sidebar />
-              <main className="flex-1 p-8">
+              <main className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden p-8">
                 <Routes>
                   <Route path="/" element={<Dashboard />} />
                   <Route path="/usagers" element={<UsagersList />} />

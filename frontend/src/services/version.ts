@@ -1,4 +1,4 @@
-export const VERSION = "0.3.2";
+export const VERSION = "0.3.3";
 
 export interface ChangelogEntry {
   version: string;
@@ -7,6 +7,26 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG = [
+  {
+    version: "0.3.3",
+    date: "2026-08-28",
+    features: [
+      "Import legacy ALTO complet (usagers, historique, logements, liens familiaux, attestations d'accueil) : reimportable a la demande, insertions par lots pour ne plus bloquer l'application pendant l'import",
+      "Import legacy des demandes CNI/Passeport corrige : lien fiable vers l'usager beneficiaire et le destinataire, statut et dates repris de la vraie table de demandes ALTO",
+      "Nouveau statut \"Refuse\" pour les demandes CNI/Passeport",
+      "Frise chronologique par piece sur la fiche dossier : etapes reelles horodatees (deposee, transmise en prefecture, retour, retiree...), importees depuis l'historique ALTO",
+      "Le changement d'etat d'une piece alimente desormais la frise chronologique (et non plus un simple commentaire de suivi), avec le catalogue complet des etats possibles",
+      "Demandes CNI/Passeport : recherche et affichage couvrant tous les usagers du dossier (beneficiaire et destinataire, pas seulement le beneficiaire)",
+      "Demandes CNI/Passeport : recherche avancee (nom, prenom, telephone, adresse, code postal, ville, cumulables)",
+      "Demandes CNI/Passeport : masquage par defaut des dossiers clotures (recuperes/refuses), avec bascule pour les afficher ; tri par date de demande plutot que date de creation",
+      "Recherche avancee equivalente sur la liste des usagers (nom, prenom, telephone, adresse, code postal, ville)",
+      "Listes de correspondance (liens de parente) utilisables comme variables dans les templates",
+      "RGPD : page d'alertes d'archivage — usagers dont le dernier evenement depasse la duree de conservation, archivage en un clic",
+      "Pagination : 25 resultats par page par defaut, choix de 25/50/100/200/500/tout, nombre total d'enregistrements toujours affiche",
+      "Interface : menu de gauche fixe (ne defile plus horizontalement avec le contenu), scrollbar horizontale toujours visible sur les tableaux larges",
+      "Correctifs : recherche usagers independante par selecteur (2e/3e demandeur), historique des attestations d'un meme type limite au demandeur principal, page RGPD restant bloquee sur \"Chargement\", requete des alertes RGPD tres lente sur un grand nombre d'usagers, champ Pays affichant \"Algerie\" par erreur d'affichage au lieu de la vraie valeur enregistree",
+    ],
+  },
   {
     version: "0.3.2",
     date: "2026-08-27",

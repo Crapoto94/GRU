@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Search, Plus, Archive, RotateCcw, Trash2, ChevronLeft, ChevronRight, FileText, X, Download, UserSearch, Home, Building2, SlidersHorizontal, ChevronDown, ChevronUp } from "lucide-react";
+import { Search, Plus, Archive, RotateCcw, Trash2, FileText, X, Download, UserSearch, Home, Building2, SlidersHorizontal, ChevronDown, ChevronUp } from "lucide-react";
 import toast from "react-hot-toast";
 import { formatNom, formatPrenom } from "../utils/format";
 import { usagersApi, attestationsApi } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
 import LogementModal from "../components/LogementModal";
+import PaginationBar, { effectiveLimit } from "../components/PaginationBar";
 import type { Usager, Attestation } from "../types";
 
 type AdvancedSearch = {
@@ -39,8 +40,8 @@ export default function UsagersList() {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [advanced, setAdvanced] = useState<AdvancedSearch>(EMPTY_ADVANCED);
   const [page, setPage] = useState(0);
+  const [limit, setLimit] = useState(25);
   const [loading, setLoading] = useState(false);
-  const limit = 20;
 
   const advancedActive = Object.values(advanced).some((v) => v.trim() !== "");
 
@@ -59,6 +60,7 @@ export default function UsagersList() {
   const load = async () => {
     setLoading(true);
     try {
+      const lim = effectiveLimit(limit);
       const res = await usagersApi.list({
         search,
         nom: advanced.nom || undefined,
@@ -68,8 +70,8 @@ export default function UsagersList() {
         code_postal: advanced.code_postal || undefined,
         ville: advanced.ville || undefined,
         archived: showArchived,
-        limit,
-        offset: page * limit,
+        limit: lim,
+        offset: page * lim,
       });
       setUsagers(res.data.rows);
       setTotal(res.data.total);
@@ -83,7 +85,7 @@ export default function UsagersList() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, advanced, showArchived, page]);
+  }, [search, advanced, showArchived, page, limit]);
 
   const setAdvancedField = (key: keyof AdvancedSearch, value: string) => {
     setAdvanced((prev) => ({ ...prev, [key]: value }));
@@ -205,8 +207,6 @@ export default function UsagersList() {
     setSynbirdTooMany(null);
   };
 
-  const totalPages = Math.ceil(total / limit);
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -299,6 +299,7 @@ export default function UsagersList() {
       </div>
 
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div className="overflow-x-scroll">
         <table className="w-full">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
@@ -394,29 +395,9 @@ export default function UsagersList() {
             )}
           </tbody>
         </table>
+        </div>
 
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between px-6 py-3 border-t border-gray-200 bg-gray-50">
-            <span className="text-sm text-gray-600">{total} resultats</span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setPage(Math.max(0, page - 1))}
-                disabled={page === 0}
-                className="p-1 rounded hover:bg-gray-200 disabled:opacity-50"
-              >
-                <ChevronLeft size={16} />
-              </button>
-              <span className="text-sm text-gray-600">{page + 1} / {totalPages}</span>
-              <button
-                onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
-                disabled={page >= totalPages - 1}
-                className="p-1 rounded hover:bg-gray-200 disabled:opacity-50"
-              >
-                <ChevronRight size={16} />
-              </button>
-            </div>
-          </div>
-        )}
+        <PaginationBar total={total} limit={limit} onLimitChange={setLimit} page={page} onPageChange={setPage} label="usager(s)" />
       </div>
 
       {/* MODAL ATTESTATIONS */}
