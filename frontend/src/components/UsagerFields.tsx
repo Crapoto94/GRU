@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Search, CheckCircle } from "lucide-react";
 import { usagersApi } from "../services/api";
+import { fetchPaysSuggestions, fetchNationaliteSuggestions } from "../utils/referentielPays";
 import type { Usager } from "../types";
 
 const SITUATIONS = ["Celibataire", "Marie(e)", "Divorce(e)", "Veuf(ve)", "Pacs(e)", "Concubin(e)"];
@@ -20,20 +21,6 @@ interface CommuneSuggestion {
   nom: string;
   code: string;
   departement?: { nom: string; code: string };
-}
-
-interface PaysSuggestion {
-  name: { common: string; official?: string };
-  cca2: string;
-}
-
-export async function fetchPaysSuggestions(q: string): Promise<{ label: string; value: string }[]> {
-  const res = await fetch(`https://restcountries.com/v3.1/name/${encodeURIComponent(q)}?fields=name,cca2`);
-  if (!res.ok) return [];
-  const data: PaysSuggestion[] = await res.json();
-  return data
-    .filter((p) => p.name?.common)
-    .map((p) => ({ label: p.name.common, value: p.name.common }));
 }
 
 export async function fetchCommuneSuggestions(q: string): Promise<{ label: string; value: string }[]> {
@@ -346,7 +333,14 @@ export default function UsagerFields({ form, onChange, onAdresseNormalisee, vari
               />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <InputField label="Nationalite" value={form.nationalite || ""} onChange={set("nationalite")} />
+              <AutocompleteField
+                label="Nationalite"
+                value={form.nationalite || ""}
+                onChange={set("nationalite")}
+                onSelect={set("nationalite")}
+                fetchSuggestions={fetchNationaliteSuggestions}
+                placeholder="Rechercher une nationalité..."
+              />
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Piece</label>
                 <select
@@ -432,7 +426,14 @@ export default function UsagerFields({ form, onChange, onAdresseNormalisee, vari
             fetchSuggestions={fetchCommuneSuggestions}
             placeholder="Rechercher une commune..."
           />
-          <InputField label="Nationalite" value={form.nationalite || ""} onChange={set("nationalite")} />
+          <AutocompleteField
+                label="Nationalite"
+                value={form.nationalite || ""}
+                onChange={set("nationalite")}
+                onSelect={set("nationalite")}
+                fetchSuggestions={fetchNationaliteSuggestions}
+                placeholder="Rechercher une nationalité..."
+              />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
           <AutocompleteField

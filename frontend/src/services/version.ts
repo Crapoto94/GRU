@@ -1,4 +1,4 @@
-export const VERSION = "0.4.0";
+export const VERSION = "0.4.1";
 
 export interface ChangelogEntry {
   version: string;
@@ -7,6 +7,13 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG = [
+  {
+    version: "0.4.1",
+    date: "2026-11-06",
+    features: [
+      "Nationalites (au feminin) et pays : autocompletion en francais depuis une API publique (Wikidata) a la place de restcountries, devenue indisponible ; listes chargees une fois puis gardees en cache, saisie libre toujours possible",
+    ],
+  },
   {
     version: "0.4.0",
     date: "2026-11-06",

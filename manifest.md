@@ -9,7 +9,7 @@
 |-------|--------|
 | Nom de l'application | **JULTO** — « J'ai Un Lien pour Tout, Ouf ! » |
 | Nom technique | **GRU** — Gestion des Relations Usager |
-| Version applicative courante | **0.4.0** (source : `frontend/src/services/version.ts`) |
+| Version applicative courante | **0.4.1** (source : `frontend/src/services/version.ts`) |
 | Dernière version `version.json` | 0.2.1 *(désynchronisée, cf. §14)* |
 | Éditeur / contexte | Ville d'Ivry-sur-Seine — DSI |
 | Type | Application web fullstack (frontend + backend séparés) |
@@ -559,7 +559,7 @@ ou une liste de correspondance (`listeCle`).
 | **API Synbird** | Rendez-vous (import contact + accompagnants) | `config_params` (`synbird_*`) | `GET /searcher?scopes[]=appointments`, `GET /company/getStaticData` |
 | **api-adresse.data.gouv.fr** | Autocomplétion adresse | aucune (public) | `GET /search/?q=` |
 | **geo.api.gouv.fr** | Autocomplétion commune (lieu de naissance) | aucune (public) | `GET /communes?nom=` |
-| **restcountries.com** | Autocomplétion pays | aucune (public) | `GET /all` / recherche |
+| **query.wikidata.org** (SPARQL) | Autocomplétion **pays** et **nationalités** en français (États souverains actuels ; gentilés au singulier féminin), chargés une fois puis mis en cache 30 jours (mémoire + localStorage) — `frontend/src/utils/referentielPays.ts`. Remplace restcountries.com v3.1, devenue indisponible (API dépréciée) | aucune (public) | `GET /sparql` |
 
 Tous les appels externes côté backend ignorent la vérification TLS
 (`httpsAgent { rejectUnauthorized: false }`) car les services Ville utilisent des
@@ -600,7 +600,7 @@ Détails notables :
 - **Source de vérité du changelog côté application** : `frontend/src/services/version.ts`
   (`VERSION` + `CHANGELOG`), affiché par `WhatsNewModal`.
 - `version.json` (racine) contient un historique plus ancien (0.1.0 → 0.2.1) et est
-  **désynchronisé** avec `version.ts` (0.4.0). À aligner lors d'une prochaine revue.
+  **désynchronisé** avec `version.ts` (0.4.1). À aligner lors d'une prochaine revue.
 - Convention : à chaque livraison, incrémenter `VERSION` et ajouter une entrée en
   tête de `CHANGELOG` (version, date, features).
 
