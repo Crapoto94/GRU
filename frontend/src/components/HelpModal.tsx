@@ -6,19 +6,26 @@ import remarkGfm from "remark-gfm";
 interface HelpModalProps {
   isOpen: boolean;
   onClose: () => void;
+  source?: string;
+  title?: string;
 }
 
-export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
+export default function HelpModal({
+  isOpen,
+  onClose,
+  source = "/julto-aide.md",
+  title = "Aide JULTO",
+}: HelpModalProps) {
   const [content, setContent] = useState<string>("");
 
   useEffect(() => {
     if (isOpen) {
-      fetch("/julto-aide.md")
+      fetch(source)
         .then((res) => res.text())
         .then((text) => setContent(text))
-        .catch(() => setContent("# Aide non disponible\n\nImpossible de charger le fichier d'aide."));
+        .catch(() => setContent("# Document non disponible\n\nImpossible de charger le fichier."));
     }
-  }, [isOpen]);
+  }, [isOpen, source]);
 
   if (!isOpen) return null;
 
@@ -26,7 +33,7 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
       <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[85vh] flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 sticky top-0 bg-white rounded-t-xl">
-          <h2 className="text-xl font-bold text-ville-dark">Aide JULTO</h2>
+          <h2 className="text-xl font-bold text-ville-dark">{title}</h2>
           <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition">
             <X size={20} />
           </button>

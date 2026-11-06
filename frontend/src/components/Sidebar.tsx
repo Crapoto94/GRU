@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { Users, FileText, Layout, Settings, LogOut, Database, Shield, Globe, ScrollText, Info, HelpCircle, Calendar, IdCard, MessageSquare, ShieldCheck, FileSearch, ListChecks } from "lucide-react";
+import { Users, FileText, Layout, Settings, LogOut, Database, Shield, Globe, ScrollText, Info, HelpCircle, Calendar, IdCard, MessageSquare, ShieldCheck, FileSearch, ListChecks, BookOpen, Bot, Award, ListTree } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { getVersion, formatVersion } from "../services/version";
@@ -43,17 +43,21 @@ export default function Sidebar() {
           <Users size={18} />
           Usagers
         </NavLink>
+        <NavLink to="/dossiers" className={linkClass}>
+          <IdCard size={18} />
+          CNI / Passeport
+        </NavLink>
         <NavLink to="/attestations" className={linkClass}>
           <FileText size={18} />
-          Attestations
+          Attestations d'accueil
         </NavLink>
         <NavLink to="/attestations/ada" className={subLinkClass}>
           <FileSearch size={14} />
           Attestations ALTO (archive)
         </NavLink>
-        <NavLink to="/dossiers" className={linkClass}>
-          <IdCard size={18} />
-          Demandes CNI / Passeport
+        <NavLink to="/certificats" className={linkClass}>
+          <Award size={18} />
+          Certificats
         </NavLink>
         {canAccessRgpd && (
           <NavLink to="/rgpd" className={linkClass}>
@@ -104,6 +108,14 @@ export default function Sidebar() {
                 <Calendar size={14} />
                 API Synbird (RDV)
               </NavLink>
+              <NavLink to="/parametrage/etapes-dossiers" className={subLinkClass}>
+                <ListTree size={14} />
+                Étapes dossiers CNI
+              </NavLink>
+              <NavLink to="/parametrage/gabarits" className={subLinkClass}>
+                <FileText size={14} />
+                Gabarits
+              </NavLink>
               <NavLink to="/parametrage/messages" className={subLinkClass}>
                 <MessageSquare size={14} />
                 Messages
@@ -138,6 +150,14 @@ export default function Sidebar() {
               <Info size={12} /> Nouveautes
             </button>
           </div>
+        </div>
+        <div className="flex items-center gap-3 px-4 mb-2 text-xs text-gray-400">
+          <button className="flex items-center gap-1 hover:text-ville-primary transition" onClick={() => window.dispatchEvent(new CustomEvent("open-manifest"))}>
+            <BookOpen size={12} /> Manifest
+          </button>
+          <button className="flex items-center gap-1 hover:text-ville-primary transition" onClick={() => window.dispatchEvent(new CustomEvent("open-agents"))}>
+            <Bot size={12} /> Agents
+          </button>
         </div>
         <button
           onClick={handleLogout}

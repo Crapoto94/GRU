@@ -51,25 +51,49 @@ const attestationRepository = {
     return db.run(`DELETE FROM ${TABLE_TEMPLATES} WHERE id = $1`, [id]);
   },
 
-  async findAll({ statut, usager_id, search, limit = 50, offset = 0 } = {}) {
+  async findAll({ statut, statut_suivi, archived, usager_id, search, nom, date_naissance, template_type, limit = 50, offset = 0 } = {}) {
     const FROM = `
       FROM ${TABLE_ATTESTATIONS} a
       LEFT JOIN "${SCHEMA_NAME}".usagers u ON a.usager_id = u.id
       LEFT JOIN "${SCHEMA_NAME}".usagers u2 ON a.usager2_id = u2.id
       LEFT JOIN "${SCHEMA_NAME}".usagers u3 ON a.usager3_id = u3.id
-      LEFT JOIN ${TABLE_TEMPLATES} t ON a.template_id = t.id`;
+      LEFT JOIN ${TABLE_TEMPLATES} t ON a.template_id = t.id
+      LEFT JOIN "${SCHEMA_NAME}".users ag ON ag.login = a.genere_par`;
     const searchClause = (p) => `(
       coalesce(u.nom,'') ILIKE $${p} OR coalesce(u.prenom,'') ILIKE $${p}
       OR coalesce(u.telephone,'') ILIKE $${p} OR coalesce(u.mobile,'') ILIKE $${p} OR coalesce(u.email,'') ILIKE $${p}
       OR coalesce(u2.nom,'') ILIKE $${p} OR coalesce(u2.prenom,'') ILIKE $${p}
       OR coalesce(u3.nom,'') ILIKE $${p} OR coalesce(u3.prenom,'') ILIKE $${p}
-      OR coalesce(a.titre,'') ILIKE $${p}
+      OR coalesce(a.titre,'') ILIKE $${p} OR coalesce(a.no_cerfa,'') ILIKE $${p}
     )`;
-    const whereParts = ["1=1", "a.statut <> 'import_alto'"];
+    const whereParts = ["1=1"];
+    if (!usager_id) whereParts.push("a.statut <> 'import_alto'");
     const params = [];
     if (search) {
       params.push(`%${search}%`);
       whereParts.push(searchClause(params.length));
+    }
+    if (template_type === "certificat") {
+      whereParts.push(`(t.nom ILIKE '%certificat%' OR t.nom ILIKE '%concubinage%')`);
+    } else if (template_type === "accueil") {
+      whereParts.push(`NOT (coalesce(t.nom,'') ILIKE '%certificat%' OR coalesce(t.nom,'') ILIKE '%concubinage%')`);
+    }
+    if (nom) {
+      params.push(`%${nom}%`);
+      whereParts.push(`(coalesce(u.nom,'') || ' ' || coalesce(u.prenom,'') ILIKE $${params.length}
+        OR coalesce(u2.nom,'') || ' ' || coalesce(u2.prenom,'') ILIKE $${params.length}
+        OR coalesce(u.prenom,'') || ' ' || coalesce(u.nom,'') ILIKE $${params.length}
+        OR coalesce(u2.prenom,'') || ' ' || coalesce(u2.nom,'') ILIKE $${params.length})`);
+    }
+    if (date_naissance) {
+      params.push(`%${date_naissance}%`);
+      whereParts.push(`(to_char(u.date_naissance, 'DD/MM/YYYY') LIKE $${params.length} OR to_char(u2.date_naissance, 'DD/MM/YYYY') LIKE $${params.length})`);
+    }
+    if (statut_suivi) {
+      params.push(String(statut_suivi).split(","));
+      whereParts.push(`a.statut_suivi = ANY($${params.length})`);
+    } else if (archived !== "true" && !usager_id) {
+      whereParts.push(`coalesce(a.statut_suivi, 'en_cours') <> 'archive'`);
     }
     if (statut) {
       params.push(statut);
@@ -81,10 +105,14 @@ const attestationRepository = {
     }
     const where = `WHERE ${whereParts.join(" AND ")}`;
     const rows = await db.all(
-      `SELECT a.*, u.nom as usager_nom, u.prenom as usager_prenom, u2.nom as usager2_nom, u2.prenom as usager2_prenom, u3.nom as usager3_nom, u3.prenom as usager3_prenom, t.nom as template_nom
+      `SELECT a.*, u.nom as usager_nom, u.prenom as usager_prenom, u.date_naissance as usager_date_naissance,
+        coalesce(u.mobile, u.telephone) as usager_contact,
+        u2.nom as usager2_nom, u2.prenom as usager2_prenom, u2.date_naissance as usager2_date_naissance,
+        u3.nom as usager3_nom, u3.prenom as usager3_prenom, t.nom as template_nom,
+        ag.nom as agent_nom, ag.prenom as agent_prenom
       ${FROM}
       ${where}
-      ORDER BY COALESCE(a.date_generation, a.created_at) DESC NULLS LAST, a.created_at DESC
+      ORDER BY COALESCE(a.date_demande::timestamptz, a.date_generation, a.created_at) DESC NULLS LAST, a.created_at DESC
       LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
       [...params, limit, offset]
     );
@@ -110,13 +138,15 @@ const attestationRepository = {
 
   async create(data) {
     const result = await db.run(
-      `INSERT INTO ${TABLE_ATTESTATIONS} (usager_id, usager2_id, usager3_id, template_id, titre, contenu_genere, fichier_pdf, statut, date_generation, genere_par)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+      `INSERT INTO ${TABLE_ATTESTATIONS} (usager_id, usager2_id, usager3_id, template_id, titre, contenu_genere, fichier_pdf, statut, date_generation, genere_par,
+        no_cerfa, date_demande, date_debut_validite, date_fin_validite, statut_suivi, date_statut)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'en_cours', NOW()) RETURNING *`,
       [
         data.usager_id, data.usager2_id || null, data.usager3_id || null, data.template_id, data.titre,
         JSON.stringify(data.contenu_genere || {}),
         data.fichier_pdf || null, data.statut || "brouillon",
         data.date_generation || null, data.genere_par || null,
+        data.no_cerfa || null, data.date_demande || null, data.date_debut_validite || null, data.date_fin_validite || null,
       ]
     );
     return result.rows ? result.rows[0] : result;
@@ -126,7 +156,7 @@ const attestationRepository = {
     const fields = [];
     const params = [];
     let idx = 1;
-    for (const key of ["titre", "contenu_genere", "fichier_pdf", "statut", "date_generation", "genere_par"]) {
+    for (const key of ["titre", "contenu_genere", "fichier_pdf", "statut", "date_generation", "genere_par", "statut_suivi", "commentaire_suivi", "date_statut"]) {
       if (data[key] !== undefined) {
         fields.push(`"${key}" = $${idx}`);
         params.push(key === "contenu_genere" ? JSON.stringify(data[key]) : data[key]);

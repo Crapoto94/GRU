@@ -8,6 +8,9 @@ const {
   setDossierMessageTemplates,
 } = require("../../utils/messageTemplates");
 
+const dossierRepository = require("../dossiers/dossiers.repository");
+const { requireRole } = require("../../middleware/auth");
+
 const PARAMS_TABLE = `"${SCHEMA_NAME}".config_params`;
 
 async function getConfig(key) {
@@ -401,6 +404,53 @@ router.put("/dossiers-messages", async (req, res, next) => {
       email_subject_template: templates.dossier_email_subject_template,
       email_content_template: templates.dossier_email_content_template,
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * @openapi
+ * /api/v1/parametrage/dossier-etapes:
+ *   get:
+ *     tags: [Parametrage]
+ *     summary: Etapes proposees dans le menu "Changer d'etat" des dossiers CNI/Passeport
+ *     responses:
+ *       200:
+ *         description: Liste (actives et inactives)
+ */
+router.get("/dossier-etapes", async (_req, res, next) => {
+  try {
+    res.json(await dossierRepository.listEtapesMenu({ all: true }));
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * @openapi
+ * /api/v1/parametrage/dossier-etapes:
+ *   put:
+ *     tags: [Parametrage]
+ *     summary: Remplacer la liste des etapes du menu (libelle, statut, commentaire, ordre, actif)
+ *     responses:
+ *       200:
+ *         description: Liste enregistree
+ */
+router.put("/dossier-etapes", requireRole("administrateur"), async (req, res, next) => {
+  try {
+    const STATUTS = ["demande", "ajourne", "arrive", "recupere", "refuse", "erreur_piece"];
+    const etapes = Array.isArray(req.body.etapes) ? req.body.etapes : [];
+    const codes = new Set();
+    for (const e of etapes) {
+      if (!e.code || codes.has(e.code)) throw Object.assign(new Error("Code d'etape manquant ou en double"), { status: 400 });
+      codes.add(e.code);
+      if (!STATUTS.includes(e.statut)) throw Object.assign(new Error("Statut invalide"), { status: 400 });
+      if (e.personne && !["parent1", "parent2", "tuteur"].includes(e.personne)) throw Object.assign(new Error("Personne invalide"), { status: 400 });
+      if (!(e.libelle || "").trim()) throw Object.assign(new Error("Le libelle est requis"), { status: 400 });
+    }
+    await dossierRepository.replaceEtapesMenu(etapes.map((e) => ({ ...e, libelle: e.libelle.trim() })));
+    res.json(await dossierRepository.listEtapesMenu({ all: true }));
   } catch (err) {
     next(err);
   }

@@ -84,6 +84,9 @@ async function prepareUsagerData(usager) {
     lieu_naissance: usager.lieu_naissance || "",
     pays_naissance: usager.pays_naissance || "",
     nationalite: usager.nationalite || "",
+    mention_nom_usage: usager.mention_nom_usage || "",
+    piece_identite_type: usager.piece_identite_type || "",
+    piece_identite_numero: usager.piece_identite_numero || "",
     situation_familiale: usager.situation_familiale || "",
     email: usager.email || "",
     telephone: usager.telephone || "",
@@ -95,6 +98,8 @@ async function prepareUsagerData(usager) {
     pays: usager.pays || "France",
   };
 }
+
+const STATUTS_SUIVI = ["en_cours", "ajourne", "arrive", "recupere", "archive"];
 
 const attestationService = {
   async listTemplates(params) {
@@ -137,7 +142,7 @@ const attestationService = {
     return attestation;
   },
 
-  async generate(usagerId, templateId, customData, user, ip, usager2Id, usager3Id, logementConcerne) {
+  async generate(usagerId, templateId, customData, user, ip, usager2Id, usager3Id, logementConcerne, suivi = {}) {
     const usager = await usagerRepository.findById(usagerId);
     if (!usager) throw Object.assign(new Error("Usager non trouve"), { status: 404 });
 
@@ -256,6 +261,10 @@ const attestationService = {
       statut: "genere",
       date_generation: new Date().toISOString(),
       genere_par: user,
+      no_cerfa: suivi.no_cerfa,
+      date_demande: suivi.date_demande,
+      date_debut_validite: suivi.date_debut_validite,
+      date_fin_validite: suivi.date_fin_validite,
     });
 
     await logAcces(user, "GENERATE_ATTESTATION", "attestations", attestation.id, {
@@ -264,6 +273,25 @@ const attestationService = {
     }, ip);
 
     return attestation;
+  },
+
+  // Suivi d'une attestation d'accueil : en_cours, ajourne (avec le document manquant),
+  // arrive, recupere, archive. Les certificats n'ont pas de statut, seulement l'archivage.
+  async updateSuivi(id, statut, commentaire, user, ip) {
+    if (!STATUTS_SUIVI.includes(statut)) {
+      throw Object.assign(new Error("Statut invalide"), { status: 400 });
+    }
+    if (statut === "ajourne" && !(commentaire || "").trim()) {
+      throw Object.assign(new Error("Precisez le document manquant pour un ajournement"), { status: 400 });
+    }
+    await this.getAttestationById(id);
+    const result = await attestationRepository.update(id, {
+      statut_suivi: statut,
+      commentaire_suivi: statut === "ajourne" ? commentaire.trim() : null,
+      date_statut: new Date().toISOString(),
+    });
+    await logAcces(user, "UPDATE_STATUT_ATTESTATION", "attestations", id, { statut, commentaire }, ip);
+    return result.rows[0];
   },
 
   async remove(id, user, ip) {

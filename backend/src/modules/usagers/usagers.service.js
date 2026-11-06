@@ -58,6 +58,14 @@ const usagerService = {
     return usagerRepository.findAll(params);
   },
 
+  async pieces(id) {
+    return usagerRepository.findPieces(id);
+  },
+
+  async demarches(id) {
+    return usagerRepository.findDemarches(id);
+  },
+
   async getById(id) {
     const usager = await usagerRepository.findById(id);
     if (!usager) throw Object.assign(new Error("Usager non trouve"), { status: 404 });
@@ -126,7 +134,7 @@ const usagerService = {
   async importFromSynbird(contact) {
     let value = (contact || "").trim();
     if (!value) throw Object.assign(new Error("Le numero de telephone ou l'email est requis"), { status: 400 });
-    if (!value.includes("@")) value = value.replace(/[\s.\-]/g, "");
+    if (!value.includes("@")) value = value.replace(/[\s.-]/g, "");
 
     const existing = await usagerRepository.findByContact(value);
     if (existing) {

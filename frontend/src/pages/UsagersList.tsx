@@ -1,14 +1,15 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { Fragment, useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Search, Plus, Archive, RotateCcw, Trash2, FileText, X, Download, UserSearch, Home, Building2, SlidersHorizontal, ChevronDown, ChevronUp } from "lucide-react";
+import { Search, Plus, Archive, RotateCcw, Trash2, FileText, X, Download, UserSearch, Home, Building2, SlidersHorizontal, ChevronDown, ChevronUp, ChevronRight, IdCard, Pencil, Award } from "lucide-react";
 import toast from "react-hot-toast";
 import { formatNom, formatPrenom } from "../utils/format";
 import { usagersApi, attestationsApi } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
 import LogementModal from "../components/LogementModal";
+import { maskDate } from "../utils/dateMask";
 import PaginationBar, { effectiveLimit } from "../components/PaginationBar";
-import type { Usager, Attestation } from "../types";
+import type { Usager, Attestation, Demarche, UsagerPiece } from "../types";
 
 type AdvancedSearch = {
   nom: string;
@@ -30,23 +31,38 @@ const ADVANCED_FIELDS: Array<{ key: keyof AdvancedSearch; label: string; placeho
   { key: "ville", label: "Ville", placeholder: "Ville" },
 ];
 
+const PIECE_STATUT_LABELS: Record<UsagerPiece["statut"], string> = {
+  demande: "En cours",
+  ajourne: "Ajourné",
+  arrive: "Arrivé",
+  recupere: "Récupéré",
+  refuse: "Archivé",
+  erreur_piece: "Erreur pièce",
+};
+
+const formatDate = (d: string | null) => (d ? new Date(d).toLocaleDateString("fr-FR") : "-");
+
 export default function UsagersList() {
   const navigate = useNavigate();
   const { isAdmin } = useAuth();
   const [usagers, setUsagers] = useState<Usager[]>([]);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState("");
+  const [dateNaissance, setDateNaissance] = useState("");
+  const [expanded, setExpanded] = useState<Record<string, Demarche[] | "loading">>({});
   const [showArchived, setShowArchived] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [advanced, setAdvanced] = useState<AdvancedSearch>(EMPTY_ADVANCED);
+  const [searchParams] = useSearchParams();
+  const [advanced, setAdvanced] = useState<AdvancedSearch>({ ...EMPTY_ADVANCED, ville: searchParams.get("ville") || "" });
   const [page, setPage] = useState(0);
   const [limit, setLimit] = useState(25);
   const [loading, setLoading] = useState(false);
 
   const advancedActive = Object.values(advanced).some((v) => v.trim() !== "");
 
-  const [attestationsModal, setAttestationsModal] = useState<{ usager: Usager; attestations: Attestation[] } | null>(null);
+  const [attestationsModal, setAttestationsModal] = useState<{ usager: Usager; attestations: Attestation[]; certificat: boolean } | null>(null);
   const [loadingAttestations, setLoadingAttestations] = useState(false);
+  const [cniModal, setCniModal] = useState<{ usager: Usager; pieces: UsagerPiece[] } | null>(null);
   const [logementModalUsager, setLogementModalUsager] = useState<Usager | null>(null);
 
   const [showSynbirdModal, setShowSynbirdModal] = useState(false);
@@ -63,6 +79,7 @@ export default function UsagersList() {
       const lim = effectiveLimit(limit);
       const res = await usagersApi.list({
         search,
+        date_naissance: dateNaissance || undefined,
         nom: advanced.nom || undefined,
         prenom: advanced.prenom || undefined,
         telephone: advanced.telephone || undefined,
@@ -85,7 +102,7 @@ export default function UsagersList() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, advanced, showArchived, page, limit]);
+  }, [search, dateNaissance, advanced, showArchived, page, limit]);
 
   const setAdvancedField = (key: keyof AdvancedSearch, value: string) => {
     setAdvanced((prev) => ({ ...prev, [key]: value }));
@@ -95,6 +112,28 @@ export default function UsagersList() {
   const resetAdvanced = () => {
     setAdvanced(EMPTY_ADVANCED);
     setPage(0);
+  };
+
+  const collapse = (id: string) =>
+    setExpanded((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+
+  const toggleExpand = async (id: string) => {
+    if (expanded[id]) {
+      collapse(id);
+      return;
+    }
+    setExpanded((prev) => ({ ...prev, [id]: "loading" }));
+    try {
+      const res = await usagersApi.demarches(id);
+      setExpanded((prev) => ({ ...prev, [id]: res.data }));
+    } catch {
+      toast.error("Erreur chargement des demarches");
+      collapse(id);
+    }
   };
 
   const handleArchive = async (id: string) => {
@@ -129,15 +168,24 @@ export default function UsagersList() {
     }
   };
 
-  const openAttestations = async (u: Usager) => {
+  const openAttestations = async (u: Usager, certificat = false) => {
     setLoadingAttestations(true);
     try {
-      const res = await attestationsApi.list({ usager_id: u.id });
-      setAttestationsModal({ usager: u, attestations: res.data.rows });
+      const res = await attestationsApi.list({ usager_id: u.id, template_type: certificat ? "certificat" : "accueil" });
+      setAttestationsModal({ usager: u, attestations: res.data.rows, certificat });
     } catch {
       toast.error("Erreur chargement attestations");
     } finally {
       setLoadingAttestations(false);
+    }
+  };
+
+  const openCni = async (u: Usager) => {
+    try {
+      const res = await usagersApi.pieces(u.id);
+      setCniModal({ usager: u, pieces: res.data });
+    } catch {
+      toast.error("Erreur chargement des demandes CNI/Passeport");
     }
   };
 
@@ -231,14 +279,24 @@ export default function UsagersList() {
 
       <div className="space-y-3">
         <div className="flex items-center gap-4">
+          <div className="relative w-72">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+            <input
+              type="text"
+              placeholder="JJMMAAAA (date de naissance)" inputMode="numeric"
+              value={dateNaissance}
+              onChange={(e) => { setDateNaissance(maskDate(e.target.value)); setPage(0); }}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-ville-primary focus:border-transparent"
+            />
+          </div>
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
             <input
               type="text"
-              placeholder="Rechercher un usager..."
+              placeholder="Rechercher (NOM)"
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(0); }}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ville-primary focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-ville-primary focus:border-transparent"
             />
           </div>
           <button
@@ -303,95 +361,154 @@ export default function UsagersList() {
         <table className="w-full">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Nom</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Prenom</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Email</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Telephone</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Ville</th>
-              <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase">Attestations</th>
-              <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase">Logement</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Statut RGPD</th>
-              <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Actions</th>
+              <th className="w-8 px-2 py-3"></th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Nom</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Prenom</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Date de naissance</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Lieu de naissance</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Telephone</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Adresse</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase">CNI/Pass</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase">Attestations</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase">Certificats</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {loading ? (
-              <tr><td colSpan={9} className="px-6 py-12 text-center text-gray-500">Chargement...</td></tr>
+              <tr><td colSpan={11} className="px-6 py-12 text-center text-gray-500">Chargement...</td></tr>
             ) : usagers.length === 0 ? (
-              <tr><td colSpan={9} className="px-6 py-12 text-center text-gray-500">Aucun usager trouve</td></tr>
+              <tr><td colSpan={11} className="px-6 py-12 text-center text-gray-500">Aucun usager trouve</td></tr>
             ) : (
-              usagers.map((u) => (
-                <motion.tr
-                  key={u.id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="hover:bg-gray-50 cursor-pointer"
-                  onClick={() => navigate(`/usagers/${u.id}`)}
-                >
-                  <td className="px-6 py-4 text-sm font-medium">{formatNom(u.nom)}</td>
-                  <td className="px-6 py-4 text-sm">{formatPrenom(u.prenom)}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{u.email || "-"}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{u.mobile || u.telephone || "-"}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{u.ville || "-"}</td>
-                  <td className="px-6 py-4 text-sm text-center" onClick={(e) => e.stopPropagation()}>
-                    {u.attestation_count > 0 ? (
-                      <button
-                        onClick={() => openAttestations(u)}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-ville-primary/10 text-ville-primary hover:bg-ville-primary/20 transition cursor-pointer"
-                      >
-                        <FileText size={12} />
-                        {u.attestation_count}
-                      </button>
-                    ) : (
-                      <span className="text-gray-300 text-xs">-</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-center" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      onClick={() => setLogementModalUsager(u)}
-                      title={
-                        u.has_logement_principal && u.has_logement_secondaire
-                          ? "Logements principal et secondaire renseignes"
-                          : u.has_logement_principal || u.has_logement_secondaire
-                          ? "Logement renseigne"
-                          : "Renseigner le logement"
-                      }
-                      className={`inline-flex items-center justify-center w-7 h-7 rounded-full transition ${
-                        u.has_logement_principal || u.has_logement_secondaire
-                          ? "bg-ville-primary/10 text-ville-primary hover:bg-ville-primary/20"
-                          : "text-gray-300 hover:bg-gray-100 hover:text-gray-400"
-                      }`}
+              usagers.map((u) => {
+                const dem = expanded[u.id];
+                return (
+                  <Fragment key={u.id}>
+                    <motion.tr
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="hover:bg-gray-50 cursor-pointer"
+                      onClick={() => toggleExpand(u.id)}
                     >
-                      {u.has_logement_principal && u.has_logement_secondaire ? <Building2 size={14} /> : <Home size={14} />}
-                    </button>
-                  </td>
-                  <td className="px-6 py-4 text-sm">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      u.consentement_rgpd ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-                    }`}>
-                      {u.consentement_rgpd ? "Consenti" : "Non consenti"}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-right">
-                    <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                      {u.archived ? (
-                        <button onClick={() => handleRestore(u.id)} className="p-1 text-green-600 hover:bg-green-50 rounded" title="Restaurer">
-                          <RotateCcw size={16} />
-                        </button>
-                      ) : (
-                        <button onClick={() => handleArchive(u.id)} className="p-1 text-orange-600 hover:bg-orange-50 rounded" title="Archiver">
-                          <Archive size={16} />
-                        </button>
-                      )}
-                      {isAdmin && (
-                        <button onClick={() => handleDelete(u.id)} className="p-1 text-red-600 hover:bg-red-50 rounded" title="Supprimer">
-                          <Trash2 size={16} />
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </motion.tr>
-              ))
+                      <td className="px-2 py-4 text-gray-400">
+                        <ChevronRight size={16} className={`transition-transform ${dem ? "rotate-90" : ""}`} />
+                      </td>
+                      <td className="px-4 py-4 text-sm font-bold">{formatNom(u.nom)}</td>
+                      <td className="px-4 py-4 text-sm">{formatPrenom(u.prenom)}</td>
+                      <td className="px-4 py-4 text-sm font-medium">{formatDate(u.date_naissance)}</td>
+                      <td className="px-4 py-4 text-sm text-gray-600">{u.lieu_naissance || "-"}</td>
+                      <td className="px-4 py-4 text-sm text-gray-600">{u.mobile || u.telephone || "-"}</td>
+                      <td className="px-4 py-4 text-sm text-gray-600">
+                        {u.Adresse || u.code_postal || u.ville ? (
+                          <>
+                            {u.Adresse && <div>{u.Adresse}</div>}
+                            <div>{[u.code_postal, u.ville].filter(Boolean).join(" ")}</div>
+                          </>
+                        ) : "-"}
+                      </td>
+                      <td className="px-4 py-4 text-sm text-center" onClick={(e) => e.stopPropagation()}>
+                        {u.cni_count > 0 ? (
+                          <button
+                            onClick={() => openCni(u)}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 hover:bg-red-200 transition cursor-pointer"
+                          >
+                            <IdCard size={12} />
+                            {u.cni_count}
+                          </button>
+                        ) : <span className="text-gray-300 text-xs">-</span>}
+                      </td>
+                      <td className="px-4 py-4 text-sm text-center" onClick={(e) => e.stopPropagation()}>
+                        {u.attestation_count > 0 ? (
+                          <button
+                            onClick={() => openAttestations(u)}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-ville-primary/10 text-ville-primary hover:bg-ville-primary/20 transition cursor-pointer"
+                          >
+                            <FileText size={12} />
+                            {u.attestation_count}
+                          </button>
+                        ) : (
+                          <span className="text-gray-300 text-xs">-</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-4 text-sm text-center" onClick={(e) => e.stopPropagation()}>
+                        {u.certificat_count > 0 ? (
+                          <button
+                            onClick={() => openAttestations(u, true)}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-violet-100 text-violet-700 hover:bg-violet-200 transition cursor-pointer"
+                          >
+                            <Award size={12} />
+                            {u.certificat_count}
+                          </button>
+                        ) : (
+                          <span className="text-gray-300 text-xs">-</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-4 text-sm text-right">
+                        <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                          <button onClick={() => navigate(`/usagers/${u.id}`)} className="p-1 text-gray-500 hover:bg-gray-100 rounded" title="Modifier">
+                            <Pencil size={16} />
+                          </button>
+                          <button
+                            onClick={() => setLogementModalUsager(u)}
+                            title="Logement"
+                            className={`p-1 rounded ${
+                              u.has_logement_principal || u.has_logement_secondaire
+                                ? "text-ville-primary hover:bg-blue-50"
+                                : "text-gray-300 hover:bg-gray-100"
+                            }`}
+                          >
+                            {u.has_logement_principal && u.has_logement_secondaire ? <Building2 size={16} /> : <Home size={16} />}
+                          </button>
+                          {u.archived ? (
+                            <button onClick={() => handleRestore(u.id)} className="p-1 text-green-600 hover:bg-green-50 rounded" title="Restaurer">
+                              <RotateCcw size={16} />
+                            </button>
+                          ) : (
+                            <button onClick={() => handleArchive(u.id)} className="p-1 text-orange-600 hover:bg-orange-50 rounded" title="Archiver">
+                              <Archive size={16} />
+                            </button>
+                          )}
+                          {isAdmin && (
+                            <button onClick={() => handleDelete(u.id)} className="p-1 text-red-600 hover:bg-red-50 rounded" title="Supprimer">
+                              <Trash2 size={16} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </motion.tr>
+                    {dem && (
+                      <tr className="bg-gray-50/70">
+                        <td></td>
+                        <td colSpan={10} className="px-4 py-3">
+                          {dem === "loading" ? (
+                            <p className="text-sm text-gray-500">Chargement...</p>
+                          ) : dem.length === 0 ? (
+                            <p className="text-sm text-gray-500">Aucune demarche pour cet usager.</p>
+                          ) : (
+                            <ul className="divide-y divide-gray-200">
+                              {dem.map((d) => (
+                                <li
+                                  key={`${d.type}-${d.id}`}
+                                  className={`flex items-center gap-4 py-2 text-sm ${d.type === "cni" ? "cursor-pointer hover:bg-white" : ""}`}
+                                  onClick={d.type === "cni" ? () => navigate(`/dossiers/${d.ref}`) : undefined}
+                                >
+                                  <span className="w-24 text-gray-500">{d.date_demarche ? new Date(d.date_demarche).toLocaleDateString("fr-FR") : "-"}</span>
+                                  <span className="flex items-center gap-2 w-52 text-gray-700">
+                                    {d.type === "cni" ? <IdCard size={14} className="text-red-600" /> : d.type === "certificat" ? <Award size={14} className="text-violet-600" /> : <FileText size={14} className="text-green-600" />}
+                                    {d.type === "cni" ? "CNI / Passeport" : d.type === "certificat" ? "Certificat" : "Attestation d'accueil"}
+                                  </span>
+                                  <span className="flex-1 truncate text-ville-dark">{d.libelle}</span>
+                                  <span className="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600">{d.statut}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })
             )}
           </tbody>
         </table>
@@ -407,9 +524,9 @@ export default function UsagersList() {
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
               <div>
                 <h2 className="text-lg font-bold text-ville-dark">
-                  Attestations de {attestationsModal.usager.prenom} {attestationsModal.usager.nom}
+                  {attestationsModal.certificat ? "Certificats" : "Attestations"} de {attestationsModal.usager.prenom} {attestationsModal.usager.nom}
                 </h2>
-                <p className="text-sm text-gray-500">{attestationsModal.attestations.length} attestation(s)</p>
+                <p className="text-sm text-gray-500">{attestationsModal.attestations.length} {attestationsModal.certificat ? "certificat(s)" : "attestation(s)"}</p>
               </div>
               <button onClick={() => setAttestationsModal(null)} className="p-2 hover:bg-gray-100 rounded-lg">
                 <X size={18} />
@@ -448,6 +565,58 @@ export default function UsagersList() {
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL CNI / PASSEPORT */}
+      {cniModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <div>
+                <h2 className="text-lg font-bold text-ville-dark">
+                  CNI / Passeport de {formatPrenom(cniModal.usager.prenom)} {formatNom(cniModal.usager.nom)}
+                </h2>
+                <p className="text-sm text-gray-500">{cniModal.pieces.length} demande(s)</p>
+              </div>
+              <button onClick={() => setCniModal(null)} className="p-2 hover:bg-gray-100 rounded-lg">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6 space-y-3">
+              {cniModal.pieces.map((p) => (
+                <div
+                  key={p.id}
+                  onClick={() => navigate(`/dossiers/${p.dossier_id}`)}
+                  className="border border-gray-200 rounded-lg p-4 cursor-pointer hover:border-ville-primary transition"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="flex items-center gap-2 text-sm font-semibold text-ville-dark">
+                      <IdCard size={16} className="text-red-600" />
+                      {p.type_piece}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                      {PIECE_STATUT_LABELS[p.statut]}
+                    </span>
+                  </div>
+                  <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                    <dt className="text-gray-500">Date de la demande</dt>
+                    <dd>{formatDate(p.date_demande)}</dd>
+                    <dt className="text-gray-500">Date d'arrivee</dt>
+                    <dd>{formatDate(p.date_arrivee)}</dd>
+                    <dt className="text-gray-500">Date de recuperation</dt>
+                    <dd>{formatDate(p.date_recuperation)}</dd>
+                    {p.destinataire_nom && (
+                      <>
+                        <dt className="text-gray-500">Destinataire</dt>
+                        <dd>{formatPrenom(p.destinataire_prenom || "")} {formatNom(p.destinataire_nom)}</dd>
+                      </>
+                    )}
+                  </dl>
+                </div>
+              ))}
             </div>
           </div>
         </div>

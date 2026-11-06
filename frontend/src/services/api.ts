@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { Usager, Template, Attestation, PaginatedResponse, Dossier, DossierPiece, DossierPieceEtape, EtapeCatalogueItem, DossierSuivi, DossierNotificationLog, DossierListItem, Logement, TypeLogement, ConservationRegle, AdaLegacy, ListeReference, ListeValeur, RgpdAlerteUsager } from "../types";
+import type { Usager, Template, Attestation, PaginatedResponse, Dossier, DossierPiece, DossierPieceEtape, EtapeCatalogueItem, DossierSuivi, DossierNotificationLog, DossierListItem, Logement, TypeLogement, ConservationRegle, AdaLegacy, ListeReference, ListeValeur, RgpdAlerteUsager, EtapeMenu, PieceListItem, StatutSuivi, Demarche, UsagerPiece } from "../types";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "",
@@ -15,6 +15,7 @@ api.interceptors.request.use((config) => {
 export const usagersApi = {
   list: (params?: {
     search?: string;
+    date_naissance?: string;
     nom?: string;
     prenom?: string;
     telephone?: string;
@@ -26,6 +27,8 @@ export const usagersApi = {
     offset?: number;
   }) => api.get<PaginatedResponse<Usager>>("/api/v1/usagers", { params }),
   getById: (id: string) => api.get<Usager>(`/api/v1/usagers/${id}`),
+  pieces: (id: string) => api.get<UsagerPiece[]>(`/api/v1/usagers/${id}/pieces`),
+  demarches: (id: string) => api.get<Demarche[]>(`/api/v1/usagers/${id}/demarches`),
   create: (data: Partial<Usager>) => api.post<Usager>("/api/v1/usagers", data),
   update: (id: string, data: Partial<Usager>) => api.put<Usager>(`/api/v1/usagers/${id}`, data),
   archive: (id: string, motif?: string) =>
@@ -68,14 +71,26 @@ export const attestationsApi = {
   deleteTemplate: (id: string) => api.delete(`/api/v1/attestations/templates/${id}`),
   downloadTemplate: (id: string) =>
     api.get(`/api/v1/attestations/templates/${id}/download`, { responseType: "blob" }),
-  list: (params?: { statut?: string; usager_id?: string; search?: string; limit?: number; offset?: number }) =>
-    api.get<PaginatedResponse<Attestation>>("/api/v1/attestations", { params }),
+  list: (params?: {
+    statut?: string;
+    statut_suivi?: string;
+    archived?: boolean;
+    usager_id?: string;
+    search?: string;
+    nom?: string;
+    date_naissance?: string;
+    template_type?: "accueil" | "certificat";
+    limit?: number;
+    offset?: number;
+  }) => api.get<PaginatedResponse<Attestation>>("/api/v1/attestations", { params }),
+  updateSuivi: (id: string, statut: StatutSuivi, commentaire?: string) =>
+    api.patch<Attestation>(`/api/v1/attestations/${id}/suivi`, { statut, commentaire }),
   getById: (id: string) => api.get<Attestation>(`/api/v1/attestations/${id}`),
   listAda: (params?: { search?: string; limite?: number; offset?: number }) =>
     api.get<PaginatedResponse<AdaLegacy>>("/api/v1/attestations/ada", { params }),
   getAda: (legacyId: number | string) =>
     api.get<AdaLegacy>(`/api/v1/attestations/ada/${legacyId}`),
-  generate: (data: { usager_id: string; usager2_id?: string; usager3_id?: string; template_id: string; custom_data?: Record<string, string>; logement_concerne?: "principal" | "secondaire" }) =>
+  generate: (data: { usager_id: string; usager2_id?: string; usager3_id?: string; template_id: string; custom_data?: Record<string, string>; logement_concerne?: "principal" | "secondaire"; replace_id?: string; no_cerfa?: string; date_demande?: string; date_debut_validite?: string; date_fin_validite?: string }) =>
     api.post<Attestation>("/api/v1/attestations/generate", data),
   download: (id: string) =>
     api.get(`/api/v1/attestations/${id}/download`, { responseType: "blob" }),
@@ -101,6 +116,59 @@ export const usersApi = {
     api.post(`/api/v1/users/${id}/reset-password`, { password }),
 };
 
+export interface Gabarit {
+  cle: string;
+  label: string;
+  description: string;
+  statut: string;
+  personnalise: boolean;
+  modifie_le: string | null;
+}
+
+export const gabaritsApi = {
+  list: () => api.get<{ gabarits: Gabarit[]; variables: Array<{ cle: string; description: string }> }>("/api/v1/gabarits"),
+  download: (cle: string) => api.get(`/api/v1/gabarits/${cle}/download`, { responseType: "blob" }),
+  upload: (cle: string, file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return api.put(`/api/v1/gabarits/${cle}`, form, { headers: { "Content-Type": "multipart/form-data" } });
+  },
+  reset: (cle: string) => api.delete(`/api/v1/gabarits/${cle}`),
+};
+
+export const parametrageApi = {
+  getDossierEtapes: () => api.get<EtapeMenu[]>("/api/v1/parametrage/dossier-etapes"),
+  saveDossierEtapes: (etapes: EtapeMenu[]) => api.put<EtapeMenu[]>("/api/v1/parametrage/dossier-etapes", { etapes }),
+};
+
+export interface DashboardStats {
+  usagers: { actifs: number; ivry: number; hors_ivry: number; majeurs: number; mineurs: number };
+  pieces: { total: number; en_cours: number; ajourne: number; arrive: number; archive: number };
+  attestations: { total: number; en_cours: number; ajourne: number; arrive: number; archive: number };
+  delais: { semaine: number | null; mois: number | null };
+}
+
+export const statsApi = {
+  dashboard: () => api.get<DashboardStats>("/api/v1/stats/dashboard"),
+};
+
+export interface DossierPayload {
+  tutelle?: boolean;
+  parent1?: Partial<Usager>;
+  parent2?: Partial<Usager>;
+  tuteur?: Partial<Usager>;
+  lignes: Array<{
+    usager_id?: string;
+    usager?: Partial<Usager>;
+    types: string[];
+    motifs?: Record<string, string>;
+    date_demande: string;
+    destinataire_usager_id?: string;
+    destinataire_index?: number;
+    canal_notification?: string;
+  }>;
+}
+
 export const dossiersApi = {
   list: (params?: {
     statut?: string;
@@ -118,25 +186,31 @@ export const dossiersApi = {
     limit?: number;
     offset?: number;
   }) => api.get<PaginatedResponse<DossierListItem>>("/api/v1/dossiers", { params }),
+  listPieces: (params?: {
+    statut?: string;
+    type_piece?: string;
+    search?: string;
+    date_naissance?: string;
+    only_pending?: boolean;
+    sort?: string;
+    order?: "asc" | "desc";
+    limit?: number;
+    offset?: number;
+  }) => api.get<PaginatedResponse<PieceListItem>>("/api/v1/dossiers/pieces", { params }),
   getById: (id: string) => api.get<Dossier>(`/api/v1/dossiers/${id}`),
   etapesCatalogue: () => api.get<EtapeCatalogueItem[]>("/api/v1/dossiers/etapes-catalogue"),
-  create: (data: {
-    lignes: Array<{
-      usager_id: string;
-      types: string[];
-      date_demande: string;
-      destinataire_usager_id?: string;
-      canal_notification?: string;
-    }>;
-  }) => api.post<Dossier>("/api/v1/dossiers", data),
+  update: (id: string, data: DossierPayload) => api.put<Dossier>(`/api/v1/dossiers/${id}`, data),
+  create: (data: DossierPayload) => api.post<Dossier>("/api/v1/dossiers", data),
   remove: (id: string) => api.delete(`/api/v1/dossiers/${id}`),
   addSuivi: (dossierId: string, commentaire: string) =>
     api.post<DossierSuivi>(`/api/v1/dossiers/${dossierId}/suivi`, { commentaire }),
-  updateStatut: (pieceId: string, code: string) =>
+  updateStatut: (pieceId: string, code: string, commentaire?: string) =>
     api.patch<{ piece: DossierPiece; etape: DossierPieceEtape; suggestNotification: boolean }>(
       `/api/v1/dossiers/pieces/${pieceId}/statut`,
-      { code }
+      { code, commentaire }
     ),
+  courrier: (pieceId: string) =>
+    api.post(`/api/v1/dossiers/pieces/${pieceId}/courrier`, undefined, { responseType: "blob" }),
   updatePiece: (pieceId: string, data: Partial<DossierPiece>) =>
     api.put<DossierPiece>(`/api/v1/dossiers/pieces/${pieceId}`, data),
   removePiece: (pieceId: string) => api.delete(`/api/v1/dossiers/pieces/${pieceId}`),

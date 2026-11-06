@@ -1,4 +1,5 @@
 const { Pool } = require("pg");
+const { MENU_SEED } = require("../utils/dossierEtapes");
 
 const SCHEMA_NAME = process.env.SCHEMA_NAME || "gru";
 
@@ -410,8 +411,65 @@ async function setupDb() {
       `ALTER TABLE "${SCHEMA_NAME}".templates ADD COLUMN IF NOT EXISTS usage_logement_principal BOOLEAN NOT NULL DEFAULT FALSE`,
       `ALTER TABLE "${SCHEMA_NAME}".templates ADD COLUMN IF NOT EXISTS usage_logement_secondaire BOOLEAN NOT NULL DEFAULT FALSE`,
       `ALTER TABLE "${SCHEMA_NAME}".dossier_pieces ADD COLUMN IF NOT EXISTS legacy_id_demande INTEGER`,
+      `UPDATE "${SCHEMA_NAME}".templates SET nom = replace(replace(nom, 'Attestation de concubinage', 'Certificat de concubinage'), 'attestation de concubinage', 'certificat de concubinage') WHERE nom ILIKE '%attestation de concubinage%'`,
+      `UPDATE "${SCHEMA_NAME}".attestations SET titre = replace(replace(titre, 'Attestation de concubinage', 'Certificat de concubinage'), 'attestation de concubinage', 'certificat de concubinage') WHERE titre ILIKE '%attestation de concubinage%'`,
+      `ALTER TABLE "${SCHEMA_NAME}".attestations ADD COLUMN IF NOT EXISTS no_cerfa VARCHAR(50)`,
+      `ALTER TABLE "${SCHEMA_NAME}".attestations ADD COLUMN IF NOT EXISTS date_demande DATE`,
+      `ALTER TABLE "${SCHEMA_NAME}".attestations ADD COLUMN IF NOT EXISTS date_debut_validite DATE`,
+      `ALTER TABLE "${SCHEMA_NAME}".attestations ADD COLUMN IF NOT EXISTS date_fin_validite DATE`,
+      `ALTER TABLE "${SCHEMA_NAME}".attestations ADD COLUMN IF NOT EXISTS statut_suivi VARCHAR(20) DEFAULT 'archive'`,
+      `ALTER TABLE "${SCHEMA_NAME}".attestations ALTER COLUMN statut_suivi SET DEFAULT 'en_cours'`,
+      `ALTER TABLE "${SCHEMA_NAME}".attestations ADD COLUMN IF NOT EXISTS commentaire_suivi TEXT`,
+      `ALTER TABLE "${SCHEMA_NAME}".attestations ADD COLUMN IF NOT EXISTS date_statut TIMESTAMPTZ DEFAULT NOW()`,
+      `ALTER TABLE "${SCHEMA_NAME}".dossiers_pieces_identite ADD COLUMN IF NOT EXISTS parent1_usager_id UUID REFERENCES "${SCHEMA_NAME}".usagers(id) ON DELETE SET NULL`,
+      `ALTER TABLE "${SCHEMA_NAME}".dossiers_pieces_identite ADD COLUMN IF NOT EXISTS parent2_usager_id UUID REFERENCES "${SCHEMA_NAME}".usagers(id) ON DELETE SET NULL`,
+      `ALTER TABLE "${SCHEMA_NAME}".dossiers_pieces_identite ADD COLUMN IF NOT EXISTS tuteur_usager_id UUID REFERENCES "${SCHEMA_NAME}".usagers(id) ON DELETE SET NULL`,
+      `ALTER TABLE "${SCHEMA_NAME}".dossier_pieces ADD COLUMN IF NOT EXISTS motif VARCHAR(50)`,
+      `ALTER TABLE "${SCHEMA_NAME}".dossier_piece_etapes ADD COLUMN IF NOT EXISTS commentaire TEXT`,
+      `ALTER TABLE "${SCHEMA_NAME}".dossiers_pieces_identite ADD COLUMN IF NOT EXISTS categorie VARCHAR(10) NOT NULL DEFAULT 'majeur'`,
+      `ALTER TABLE "${SCHEMA_NAME}".dossiers_pieces_identite ADD COLUMN IF NOT EXISTS tutelle BOOLEAN NOT NULL DEFAULT FALSE`,
+      `ALTER TABLE "${SCHEMA_NAME}".usagers ADD COLUMN IF NOT EXISTS mention_nom_usage VARCHAR(150)`,
+      `ALTER TABLE "${SCHEMA_NAME}".usagers ADD COLUMN IF NOT EXISTS taille INTEGER`,
+      `ALTER TABLE "${SCHEMA_NAME}".usagers ADD COLUMN IF NOT EXISTS piece_identite_type VARCHAR(30)`,
+      `ALTER TABLE "${SCHEMA_NAME}".usagers ADD COLUMN IF NOT EXISTS piece_identite_numero VARCHAR(50)`,
+      `ALTER TABLE "${SCHEMA_NAME}".usagers ADD COLUMN IF NOT EXISTS couleur_yeux VARCHAR(50)`,
     ];
     for (const sql of alterCols) await client.query(sql);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS "${SCHEMA_NAME}".dossier_etapes_menu (
+        code VARCHAR(60) PRIMARY KEY,
+        statut VARCHAR(20) NOT NULL,
+        libelle VARCHAR(255) NOT NULL,
+        commentaire BOOLEAN NOT NULL DEFAULT FALSE,
+        si_tuteur BOOLEAN NOT NULL DEFAULT FALSE,
+        actif BOOLEAN NOT NULL DEFAULT TRUE,
+        ordre INTEGER NOT NULL DEFAULT 0
+      )
+    `);
+    await client.query(`ALTER TABLE "${SCHEMA_NAME}".dossier_etapes_menu ADD COLUMN IF NOT EXISTS personne VARCHAR(10)`);
+    await client.query(`UPDATE "${SCHEMA_NAME}".dossier_etapes_menu SET personne = 'tuteur' WHERE si_tuteur AND personne IS NULL`);
+    const menuCount = await client.query(`SELECT COUNT(*)::int AS n FROM "${SCHEMA_NAME}".dossier_etapes_menu`);
+    // Valeurs initiales seulement : ensuite le menu se gere dans Parametrage (une suppression ne doit pas etre rejouee).
+    for (const [i, e] of menuCount.rows[0].n === 0 ? MENU_SEED.entries() : []) {
+      await client.query(
+        `INSERT INTO "${SCHEMA_NAME}".dossier_etapes_menu (code, statut, libelle, commentaire, si_tuteur, personne, ordre)
+         VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (code) DO NOTHING`,
+        [e.code, e.statut, e.libelle, !!e.commentaire, e.personne === "tuteur", e.personne || null, i + 1]
+      );
+    }
+    // Choix "Par le parent 1 / 2" ajoutes une seule fois aux menus deja initialises.
+    const migParents = await client.query(`SELECT 1 FROM "${SCHEMA_NAME}".config_params WHERE cle = 'migr_etapes_parents'`);
+    if (migParents.rowCount === 0) {
+      for (const e of MENU_SEED.filter((x) => x.personne === "parent1" || x.personne === "parent2")) {
+        await client.query(
+          `INSERT INTO "${SCHEMA_NAME}".dossier_etapes_menu (code, statut, libelle, commentaire, si_tuteur, personne, ordre)
+           VALUES ($1,$2,$3,FALSE,FALSE,$4,$5) ON CONFLICT (code) DO NOTHING`,
+          [e.code, e.statut, e.libelle, e.personne, 100]
+        );
+      }
+      await client.query(`INSERT INTO "${SCHEMA_NAME}".config_params (cle, valeur) VALUES ('migr_etapes_parents', '1') ON CONFLICT (cle) DO NOTHING`);
+    }
 
     await client.query(`
       DO $$
@@ -429,7 +487,7 @@ async function setupDb() {
           ALTER TABLE "${SCHEMA_NAME}".dossier_pieces DROP CONSTRAINT dossier_pieces_statut_check;
         END IF;
         ALTER TABLE "${SCHEMA_NAME}".dossier_pieces ADD CONSTRAINT dossier_pieces_statut_check
-          CHECK (statut IN ('demande','ajourne','arrive','recupere','refuse'));
+          CHECK (statut IN ('demande','ajourne','arrive','recupere','refuse','erreur_piece'));
       END $$;
     `);
 

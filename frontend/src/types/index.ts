@@ -4,6 +4,11 @@ export interface Usager {
   nom: string;
   prenom: string;
   nom_usage: string | null;
+  mention_nom_usage: string | null;
+  taille: number | null;
+  couleur_yeux: string | null;
+  piece_identite_type: string | null;
+  piece_identite_numero: string | null;
   date_naissance: string;
   lieu_naissance: string | null;
   pays_naissance: string;
@@ -24,10 +29,33 @@ export interface Usager {
   motif_archivage: string | null;
   created_by: string | null;
   attestation_count: number;
+  cni_count: number;
+  certificat_count: number;
   has_logement_principal: boolean;
   has_logement_secondaire: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface UsagerPiece {
+  id: string;
+  dossier_id: string;
+  type_piece: "CNI" | "Passeport";
+  statut: "demande" | "ajourne" | "arrive" | "recupere" | "refuse" | "erreur_piece";
+  date_demande: string;
+  date_arrivee: string | null;
+  date_recuperation: string | null;
+  destinataire_nom: string | null;
+  destinataire_prenom: string | null;
+}
+
+export interface Demarche {
+  type: "cni" | "attestation" | "certificat";
+  id: string;
+  libelle: string;
+  statut: string;
+  date_demarche: string | null;
+  ref: string;
 }
 
 export type StatutOccupation = "proprietaire" | "locataire" | "autre";
@@ -85,6 +113,8 @@ export interface ListeReference {
   updated_at: string;
 }
 
+export type StatutSuivi = "en_cours" | "ajourne" | "arrive" | "recupere" | "archive";
+
 export interface Attestation {
   id: string;
   usager_id: string;
@@ -100,6 +130,18 @@ export interface Attestation {
   template_nom: string;
   titre: string;
   contenu_genere: Record<string, string>;
+  no_cerfa: string | null;
+  date_demande: string | null;
+  date_debut_validite: string | null;
+  date_fin_validite: string | null;
+  statut_suivi: StatutSuivi;
+  commentaire_suivi: string | null;
+  date_statut: string | null;
+  usager_date_naissance: string | null;
+  usager_contact: string | null;
+  usager2_date_naissance: string | null;
+  agent_nom: string | null;
+  agent_prenom: string | null;
   fichier_pdf: string | null;
   statut: string;
   date_generation: string | null;
@@ -143,13 +185,35 @@ export interface PaginatedResponse<T> {
 }
 
 export type TypePiece = "CNI" | "Passeport";
-export type StatutPiece = "demande" | "ajourne" | "arrive" | "recupere" | "refuse";
+export type StatutPiece = "demande" | "ajourne" | "arrive" | "recupere" | "refuse" | "erreur_piece";
 export type CanalNotification = "sms" | "email" | "both";
+
+export type Personne = "parent1" | "parent2" | "tuteur";
+
+export interface PersonneDossier {
+  id: string;
+  civilite: string;
+  nom: string;
+  prenom: string;
+}
 
 export interface EtapeCatalogueItem {
   code: string;
   libelle: string;
   statut: StatutPiece;
+  menu: boolean;
+  commentaire: boolean;
+  personne: Personne | null;
+}
+
+export interface EtapeMenu {
+  code: string;
+  statut: StatutPiece;
+  libelle: string;
+  commentaire: boolean;
+  personne: Personne | null;
+  actif: boolean;
+  ordre: number;
 }
 
 export interface DossierPieceEtape {
@@ -160,6 +224,7 @@ export interface DossierPieceEtape {
   libelle: string;
   statut_equivalent: StatutPiece | null;
   code_legacy: string | null;
+  commentaire: string | null;
   created_at: string;
 }
 
@@ -170,6 +235,7 @@ export interface DossierPiece {
   usager_nom: string;
   usager_prenom: string;
   type_piece: TypePiece;
+  motif: string | null;
   date_demande: string;
   statut: StatutPiece;
   destinataire_usager_id: string | null;
@@ -213,8 +279,35 @@ export interface Dossier {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  categorie: "majeur" | "mineur";
+  tutelle: boolean;
+  parent1_usager_id: string | null;
+  parent2_usager_id: string | null;
+  tuteur_usager_id: string | null;
+  parent1: PersonneDossier | null;
+  parent2: PersonneDossier | null;
+  tuteur: PersonneDossier | null;
   pieces: DossierPiece[];
   suivi: DossierSuivi[];
+}
+
+export interface PieceListItem {
+  piece_id: string;
+  dossier_id: string;
+  type_piece: TypePiece;
+  statut: StatutPiece;
+  motif: string | null;
+  date_demande: string;
+  usager_id: string;
+  usager_nom: string;
+  usager_prenom: string;
+  date_naissance: string;
+  contact: string | null;
+  destinataire_nom: string | null;
+  destinataire_prenom: string | null;
+  agent_nom: string | null;
+  agent_prenom: string | null;
+  depuis_date: string | null;
 }
 
 export interface DossierListItem {

@@ -91,8 +91,66 @@ router.get("/", async (req, res, next) => {
  *       200:
  *         description: Liste des etapes (code, libelle, statut)
  */
-router.get("/etapes-catalogue", (_req, res) => {
-  res.json(dossierService.getEtapeCatalog());
+/**
+ * @openapi
+ * /api/v1/dossiers/pieces:
+ *   get:
+ *     tags: [Dossiers]
+ *     summary: Liste des pieces CNI/Passeport (une ligne par piece) avec statut courant et anciennete
+ *     parameters:
+ *       - in: query
+ *         name: statut
+ *         schema:
+ *           type: string
+ *         description: Un ou plusieurs statuts separes par des virgules
+ *       - in: query
+ *         name: type_piece
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Nom, prenom ou telephone (beneficiaire ou destinataire)
+ *       - in: query
+ *         name: date_naissance
+ *         schema:
+ *           type: string
+ *         description: JJ/MM/AAAA (partiel accepte)
+ *       - in: query
+ *         name: only_pending
+ *         schema:
+ *           type: boolean
+ *     responses:
+ *       200:
+ *         description: Pieces
+ */
+router.get("/pieces", async (req, res, next) => {
+  try {
+    const { statut, type_piece, search, date_naissance, only_pending, sort, order, limit, offset } = req.query;
+    const result = await dossierService.listPieces({
+      statut,
+      type_piece,
+      search,
+      date_naissance,
+      only_pending: only_pending === "true",
+      sort,
+      order,
+      limit: parseInt(limit, 10) || 50,
+      offset: parseInt(offset, 10) || 0,
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/etapes-catalogue", async (_req, res, next) => {
+  try {
+    res.json(await dossierService.getEtapeCatalog());
+  } catch (err) {
+    next(err);
+  }
 });
 
 /**
@@ -188,6 +246,31 @@ router.post("/", async (req, res, next) => {
  *       204:
  *         description: Supprime
  */
+/**
+ * @openapi
+ * /api/v1/dossiers/{id}:
+ *   put:
+ *     tags: [Dossiers]
+ *     summary: Modifier un dossier (memes champs que la creation : usagers, parents, tuteur, pieces)
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Dossier mis a jour
+ */
+router.put("/:id", async (req, res, next) => {
+  try {
+    const dossier = await dossierService.update(req.params.id, req.body, req.user?.login || "system", req.ip);
+    res.json(dossier);
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.delete("/:id", async (req, res, next) => {
   try {
     await dossierService.remove(req.params.id, req.user?.login || "system", req.ip);
@@ -261,13 +344,41 @@ router.post("/:id/suivi", async (req, res, next) => {
  *       200:
  *         description: Piece mise a jour + etape ajoutee a la frise, avec suggestion de notification si passage a "arrive"
  */
+/**
+ * @openapi
+ * /api/v1/dossiers/pieces/{pieceId}/courrier:
+ *   post:
+ *     tags: [Dossiers]
+ *     summary: Generer le courrier (ajournement, relance ou archivage selon le statut) au format .docx
+ *     parameters:
+ *       - in: path
+ *         name: pieceId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Fichier .docx
+ */
+router.post("/pieces/:pieceId/courrier", async (req, res, next) => {
+  try {
+    const { buffer, filename } = await dossierService.generateCourrier(req.params.pieceId, req.user?.login || "system", req.ip);
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.send(buffer);
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.patch("/pieces/:pieceId/statut", async (req, res, next) => {
   try {
     const result = await dossierService.updateStatut(
       req.params.pieceId,
       req.body.code,
       req.user?.login || "system",
-      req.ip
+      req.ip,
+      req.body.commentaire
     );
     res.json(result);
   } catch (err) {
