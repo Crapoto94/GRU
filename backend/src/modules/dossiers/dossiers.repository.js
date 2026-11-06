@@ -25,19 +25,27 @@ const dossierRepository = {
     return result.rows[0];
   },
 
-  async createDossierWithPieces(createdBy, pieces, suiviTexte) {
+  async createDossierWithPieces(createdBy, pieces, suiviTexte, dossierData = {}) {
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
       const dossierResult = await client.query(
-        `INSERT INTO ${DOSSIERS} (created_by) VALUES ($1) RETURNING *`,
-        [createdBy]
+        `INSERT INTO ${DOSSIERS} (created_by, categorie, tutelle, parent1_usager_id, parent2_usager_id, tuteur_usager_id)
+         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+        [
+          createdBy,
+          dossierData.categorie || "majeur",
+          dossierData.tutelle === true,
+          dossierData.parent1_usager_id || null,
+          dossierData.parent2_usager_id || null,
+          dossierData.tuteur_usager_id || null,
+        ]
       );
       const dossier = dossierResult.rows[0];
       for (const p of pieces) {
         await client.query(
-          `INSERT INTO ${PIECES} (dossier_id, usager_id, type_piece, date_demande, destinataire_usager_id, canal_notification)
-           VALUES ($1,$2,$3,$4,$5,$6)`,
+          `INSERT INTO ${PIECES} (dossier_id, usager_id, type_piece, date_demande, destinataire_usager_id, canal_notification, motif)
+           VALUES ($1,$2,$3,$4,$5,$6,$7)`,
           [
             dossier.id,
             p.usager_id,
@@ -45,6 +53,7 @@ const dossierRepository = {
             p.date_demande,
             p.destinataire_usager_id || p.usager_id,
             p.canal_notification || "email",
+            p.motif || null,
           ]
         );
       }
@@ -70,17 +79,61 @@ const dossierRepository = {
     return db.run(`DELETE FROM ${DOSSIERS} WHERE id = $1`, [id]);
   },
 
-  async addPiece(dossierId, { usager_id, type_piece, date_demande, destinataire_usager_id, canal_notification }) {
+  async updateDossierRow(id, { categorie, tutelle, parent1_usager_id, parent2_usager_id, tuteur_usager_id }) {
+    return db.run(
+      `UPDATE ${DOSSIERS} SET categorie = $1, tutelle = $2, parent1_usager_id = $3, parent2_usager_id = $4,
+        tuteur_usager_id = $5, updated_at = NOW() WHERE id = $6`,
+      [categorie, tutelle === true, parent1_usager_id || null, parent2_usager_id || null, tuteur_usager_id || null, id]
+    );
+  },
+
+  async addPiece(dossierId, { usager_id, type_piece, date_demande, destinataire_usager_id, canal_notification, motif }) {
     const result = await db.run(
-      `INSERT INTO ${PIECES} (dossier_id, usager_id, type_piece, date_demande, destinataire_usager_id, canal_notification)
-       VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
-      [dossierId, usager_id, type_piece, date_demande, destinataire_usager_id || usager_id, canal_notification || "email"]
+      `INSERT INTO ${PIECES} (dossier_id, usager_id, type_piece, date_demande, destinataire_usager_id, canal_notification, motif)
+       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+      [dossierId, usager_id, type_piece, date_demande, destinataire_usager_id || usager_id, canal_notification || "email", motif || null]
     );
     return result.rows[0];
   },
 
   async findPiecesByDossier(dossierId) {
     return db.all(`${PIECE_SELECT} WHERE p.dossier_id = $1 ORDER BY p.created_at`, [dossierId]);
+  },
+
+  async listEtapesMenu({ all = false } = {}) {
+    return db.all(
+      `SELECT code, statut, libelle, commentaire, personne, actif, ordre
+       FROM "${SCHEMA_NAME}".dossier_etapes_menu ${all ? "" : "WHERE actif"}
+       ORDER BY ordre, libelle`
+    );
+  },
+
+  async findEtapeMenu(code) {
+    return db.get(
+      `SELECT code, statut, libelle FROM "${SCHEMA_NAME}".dossier_etapes_menu WHERE code = $1 AND actif`,
+      [code]
+    );
+  },
+
+  async replaceEtapesMenu(etapes) {
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query(`DELETE FROM "${SCHEMA_NAME}".dossier_etapes_menu`);
+      for (const [i, e] of etapes.entries()) {
+        await client.query(
+          `INSERT INTO "${SCHEMA_NAME}".dossier_etapes_menu (code, statut, libelle, commentaire, si_tuteur, personne, actif, ordre)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+          [e.code, e.statut, e.libelle, !!e.commentaire, e.personne === "tuteur", e.personne || null, e.actif !== false, i + 1]
+        );
+      }
+      await client.query("COMMIT");
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
+    }
   },
 
   async findEtapesByDossier(dossierId) {
@@ -97,12 +150,12 @@ const dossierRepository = {
     return db.get(`${PIECE_SELECT} WHERE p.id = $1`, [id]);
   },
 
-  async addEtape(dossierPieceId, { libelle, statut_equivalent, code_legacy }) {
+  async addEtape(dossierPieceId, { libelle, statut_equivalent, code_legacy, commentaire }) {
     const result = await db.run(
-      `INSERT INTO ${ETAPES} (dossier_piece_id, ordre, date_etape, libelle, statut_equivalent, code_legacy)
-       VALUES ($1, COALESCE((SELECT MAX(ordre) FROM ${ETAPES} WHERE dossier_piece_id = $1), 0) + 1, NOW(), $2, $3, $4)
+      `INSERT INTO ${ETAPES} (dossier_piece_id, ordre, date_etape, libelle, statut_equivalent, code_legacy, commentaire)
+       VALUES ($1, COALESCE((SELECT MAX(ordre) FROM ${ETAPES} WHERE dossier_piece_id = $1), 0) + 1, NOW(), $2, $3, $4, $5)
        RETURNING *`,
-      [dossierPieceId, libelle, statut_equivalent, code_legacy]
+      [dossierPieceId, libelle, statut_equivalent, code_legacy, commentaire || null]
     );
     return result.rows[0];
   },
@@ -115,7 +168,7 @@ const dossierRepository = {
   },
 
   async updatePiece(id, data) {
-    const allowed = ["date_demande", "destinataire_usager_id", "canal_notification"];
+    const allowed = ["date_demande", "destinataire_usager_id", "canal_notification", "motif"];
     const fields = [];
     const params = [];
     let idx = 1;
@@ -171,6 +224,82 @@ const dossierRepository = {
     return db.all(`SELECT * FROM ${NOTIFS} WHERE dossier_piece_id = $1 ORDER BY created_at DESC`, [pieceId]);
   },
 
+  // Une ligne par piece (CNI/Passeport), avec la date d'entree dans le statut courant
+  // ("depuis") : en cours = depuis la demande (cumul des periodes d'ajournement),
+  // arrive / recupere = depuis l'arrivee / la recuperation, ajourne = depuis l'ajournement.
+  async findPiecesList({
+    statut, type_piece, search, date_naissance, only_pending, sort, order, limit = 50, offset = 0,
+  } = {}) {
+    const params = [];
+    let where = "WHERE 1=1";
+    if (statut) {
+      params.push(String(statut).split(","));
+      where += ` AND p.statut = ANY($${params.length})`;
+    } else if (only_pending) {
+      where += ` AND p.statut NOT IN ('recupere','refuse')`;
+    }
+    if (type_piece) {
+      params.push(type_piece);
+      where += ` AND p.type_piece = $${params.length}`;
+    }
+    if (search) {
+      params.push(`%${search}%`);
+      const n = params.length;
+      where += ` AND (u.nom || ' ' || u.prenom ILIKE $${n} OR u.prenom || ' ' || u.nom ILIKE $${n}
+        OR coalesce(u.telephone,'') ILIKE $${n} OR coalesce(u.mobile,'') ILIKE $${n}
+        OR coalesce(dest.nom,'') || ' ' || coalesce(dest.prenom,'') ILIKE $${n}
+        OR coalesce(dest.telephone,'') ILIKE $${n} OR coalesce(dest.mobile,'') ILIKE $${n})`;
+    }
+    if (date_naissance) {
+      params.push(`%${date_naissance}%`);
+      where += ` AND to_char(u.date_naissance, 'DD/MM/YYYY') LIKE $${params.length}`;
+    }
+
+    const SORT_COLUMNS = {
+      agent: "ag.nom",
+      usagers: "u.nom",
+      pieces: "p.type_piece",
+      statuts: "p.statut",
+      depuis: "depuis_date",
+      date_demande: "p.date_demande",
+    };
+    const sortColumn = SORT_COLUMNS[sort] || SORT_COLUMNS.date_demande;
+    const sortDir = order === "asc" ? "ASC" : "DESC";
+
+    const FROM = `
+      FROM ${PIECES} p
+      JOIN ${DOSSIERS} d ON d.id = p.dossier_id
+      JOIN ${USAGERS} u ON u.id = p.usager_id
+      LEFT JOIN ${USAGERS} dest ON dest.id = p.destinataire_usager_id
+      LEFT JOIN "${SCHEMA_NAME}".users ag ON ag.login = d.created_by
+      LEFT JOIN LATERAL (
+        SELECT e.date_etape FROM ${ETAPES} e
+        WHERE e.dossier_piece_id = p.id AND e.statut_equivalent = p.statut
+        ORDER BY e.ordre DESC LIMIT 1
+      ) et ON TRUE
+      ${where}`;
+
+    const rows = await db.all(
+      `SELECT p.id AS piece_id, p.dossier_id, p.type_piece, p.statut, p.motif, p.date_demande,
+        u.id AS usager_id, u.nom AS usager_nom, u.prenom AS usager_prenom, u.date_naissance,
+        coalesce(dest.mobile, dest.telephone, u.mobile, u.telephone) AS contact,
+        dest.nom AS destinataire_nom, dest.prenom AS destinataire_prenom,
+        ag.nom AS agent_nom, ag.prenom AS agent_prenom,
+        CASE p.statut
+          WHEN 'demande' THEN p.date_demande::timestamptz
+          WHEN 'arrive' THEN coalesce(p.date_arrivee, et.date_etape, p.updated_at)
+          WHEN 'recupere' THEN coalesce(p.date_recuperation, et.date_etape, p.updated_at)
+          ELSE coalesce(et.date_etape, p.updated_at)
+        END AS depuis_date
+      ${FROM}
+      ORDER BY ${sortColumn} ${sortDir} NULLS LAST, p.created_at DESC
+      LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+      [...params, limit, offset]
+    );
+    const countResult = await db.get(`SELECT COUNT(*) AS total ${FROM}`, params);
+    return { rows, total: parseInt(countResult.total, 10) };
+  },
+
   async findDossiersList({
     statut, type_piece, search, nom, prenom, telephone, adresse, code_postal, ville,
     only_pending, sort, order, limit = 50, offset = 0,
@@ -178,8 +307,8 @@ const dossierRepository = {
     const params = [];
     let matchWhere = "WHERE 1=1";
     if (statut) {
-      params.push(statut);
-      matchWhere += ` AND p.statut = $${params.length}`;
+      params.push(String(statut).split(","));
+      matchWhere += ` AND p.statut = ANY($${params.length})`;
     } else if (only_pending) {
       matchWhere += ` AND p.statut NOT IN ('recupere','refuse')`;
     }

@@ -7,11 +7,12 @@ import { dossiersApi } from "../services/api";
 import type { Dossier, DossierPiece, StatutPiece, DossierNotificationLog, EtapeCatalogueItem } from "../types";
 
 const STATUT_LABELS: Record<StatutPiece, string> = {
-  demande: "Demandé",
+  demande: "En cours",
   ajourne: "Ajourné",
   arrive: "Arrivé",
   recupere: "Récupéré",
-  refuse: "Refusé",
+  refuse: "Archivé",
+  erreur_piece: "Erreur pièce",
 };
 
 const STATUT_COLORS: Record<StatutPiece, string> = {
@@ -19,8 +20,21 @@ const STATUT_COLORS: Record<StatutPiece, string> = {
   ajourne: "bg-amber-100 text-amber-700",
   arrive: "bg-green-100 text-green-700",
   recupere: "bg-blue-100 text-blue-700",
-  refuse: "bg-rose-100 text-rose-700",
+  refuse: "bg-gray-200 text-gray-600",
+  erreur_piece: "bg-purple-100 text-purple-700",
 };
+
+// Libelles du menu "Changer d'etat" : le choix reserve au tuteur nomme le destinataire du dossier.
+function menuLabel(e: EtapeCatalogueItem, dossier: Dossier) {
+  const p = e.personne ? dossier[e.personne] : null;
+  return p ? `${e.libelle} (${formatNom(p.nom)} ${formatPrenom(p.prenom)})` : e.libelle;
+}
+
+// Commentaire de l'etape qui a conduit au statut courant (nature du retour / de l'erreur).
+function commentaireCourant(piece: DossierPiece) {
+  const derniere = [...piece.etapes].reverse().find((e) => e.statut_equivalent === piece.statut);
+  return derniere?.commentaire || null;
+}
 
 export default function DossierDetail() {
   const { id } = useParams();
@@ -34,6 +48,8 @@ export default function DossierDetail() {
   const [notifications, setNotifications] = useState<DossierNotificationLog[]>([]);
   const [timelinePieceId, setTimelinePieceId] = useState<string | null>(null);
   const [etapeCatalogue, setEtapeCatalogue] = useState<EtapeCatalogueItem[]>([]);
+  const [pending, setPending] = useState<{ pieceId: string; item: EtapeCatalogueItem } | null>(null);
+  const [pendingComment, setPendingComment] = useState("");
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -65,12 +81,44 @@ export default function DossierDetail() {
 
   const handleEtapeChange = async (piece: DossierPiece, code: string) => {
     if (!code) return;
+    const item = etapeCatalogue.find((e) => e.code === code);
+    // Ajourne / erreur piece : on precise d'abord la nature (commentaire) avant d'enregistrer.
+    if (item?.commentaire) {
+      setPending({ pieceId: piece.id, item });
+      setPendingComment("");
+      return;
+    }
+    await applyEtape(piece.id, code);
+  };
+
+  const applyEtape = async (pieceId: string, code: string, commentaire?: string) => {
     try {
-      await dossiersApi.updateStatut(piece.id, code);
+      await dossiersApi.updateStatut(pieceId, code, commentaire);
       toast.success("Etape ajoutee a la frise");
+      setPending(null);
+      setPendingComment("");
       load();
     } catch (err) {
       toast.error(errorMessage(err, "Erreur lors du changement d'etat"));
+    }
+  };
+
+  const handleCourrier = async (piece: DossierPiece) => {
+    try {
+      const res = await dossiersApi.courrier(piece.id);
+      const blob = new Blob([res.data], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `courrier_${piece.usager_nom}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success("Courrier généré (tracé dans le suivi du dossier)");
+      load();
+    } catch {
+      toast.error("Erreur lors de la génération du courrier");
     }
   };
 
@@ -194,17 +242,28 @@ export default function DossierDetail() {
                     >
                       <option value="">Changer d&apos;état...</option>
                       {(Object.keys(STATUT_LABELS) as StatutPiece[]).map((s) => {
-                        const items = etapeCatalogue.filter((e) => e.statut === s);
+                        const items = etapeCatalogue.filter(
+                          (e) => e.menu && e.statut === s && (!e.personne || !!dossier[e.personne])
+                        );
                         if (items.length === 0) return null;
                         return (
                           <optgroup key={s} label={STATUT_LABELS[s]}>
                             {items.map((e) => (
-                              <option key={e.code} value={e.code}>{e.libelle}</option>
+                              <option key={e.code} value={e.code}>{menuLabel(e, dossier)}</option>
                             ))}
                           </optgroup>
                         );
                       })}
                     </select>
+                    {(piece.statut === "ajourne" || piece.statut === "arrive" || piece.statut === "refuse") && (
+                      <button
+                        onClick={() => handleCourrier(piece)}
+                        className="p-1.5 text-ville-primary hover:bg-blue-50 rounded-lg"
+                        title={`Générer le courrier (${piece.statut === "ajourne" ? "ajournement" : piece.statut === "arrive" ? "relance" : "archivage"})`}
+                      >
+                        <Mail size={14} />
+                      </button>
+                    )}
                     <button
                       onClick={() => handleRemovePiece(piece)}
                       className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
@@ -214,6 +273,40 @@ export default function DossierDetail() {
                     </button>
                   </div>
                 </div>
+
+                {pending?.pieceId === piece.id && (
+                  <div className="flex flex-wrap items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg p-3">
+                    <span className="text-xs font-medium text-gray-700">{pending.item.libelle}</span>
+                    <input
+                      type="text"
+                      autoFocus
+                      value={pendingComment}
+                      onChange={(e) => setPendingComment(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") applyEtape(piece.id, pending.item.code, pendingComment); }}
+                      placeholder={
+                        pending.item.statut === "erreur_piece"
+                          ? "Nature de l'erreur sur la pièce"
+                          : "Précision (ex : photo de plus de 6 mois, justificatif au nom des 2 parents...)"
+                      }
+                      className="flex-1 min-w-[16rem] px-3 py-1.5 border border-gray-300 rounded-lg text-sm"
+                    />
+                    <button
+                      onClick={() => applyEtape(piece.id, pending.item.code, pendingComment)}
+                      className="bg-ville-primary text-white px-3 py-1.5 rounded-lg text-xs hover:bg-blue-700"
+                    >
+                      Valider
+                    </button>
+                    <button onClick={() => setPending(null)} className="px-2 py-1.5 text-xs text-gray-500 hover:bg-gray-100 rounded-lg">
+                      Annuler
+                    </button>
+                  </div>
+                )}
+
+                {commentaireCourant(piece) && (
+                  <p className={`text-xs rounded-lg px-3 py-2 ${piece.statut === "erreur_piece" ? "bg-purple-50 text-purple-800" : "bg-amber-50 text-amber-800"}`}>
+                    <span className="font-medium">{STATUT_LABELS[piece.statut]} :</span> {commentaireCourant(piece)}
+                  </p>
+                )}
 
                 <div className="text-xs text-gray-500 flex flex-wrap gap-x-4 gap-y-1">
                   <span>Demandee le {new Date(piece.date_demande).toLocaleDateString("fr-FR")}</span>
@@ -250,6 +343,7 @@ export default function DossierDetail() {
                           />
                           <div className="flex-1 min-w-0">
                             <p className="text-sm text-gray-800">{e.libelle}</p>
+                            {e.commentaire && <p className="text-xs text-gray-600 italic">{e.commentaire}</p>}
                             <p className="text-xs text-gray-400">{new Date(e.date_etape).toLocaleString("fr-FR")}</p>
                           </div>
                         </li>

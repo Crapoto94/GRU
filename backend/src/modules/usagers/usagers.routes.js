@@ -61,9 +61,10 @@ const { requireRole } = require("../../middleware/auth");
  */
 router.get("/", async (req, res, next) => {
   try {
-    const { search, nom, prenom, telephone, adresse, code_postal, ville, archived, limit, offset } = req.query;
+    const { search, date_naissance, nom, prenom, telephone, adresse, code_postal, ville, archived, limit, offset } = req.query;
     const result = await usagerService.list({
       search,
+      date_naissance,
       nom,
       prenom,
       telephone,
@@ -143,6 +144,54 @@ router.get("/import-synbird", async (req, res, next) => {
  *       404:
  *         description: Non trouve
  */
+/**
+ * @openapi
+ * /api/v1/usagers/{id}/pieces:
+ *   get:
+ *     tags: [Usagers]
+ *     summary: Demandes de CNI/Passeport de l'usager (statut, dates), plus recentes en premier
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Liste des pieces
+ */
+router.get("/:id/pieces", async (req, res, next) => {
+  try {
+    res.json(await usagerService.pieces(req.params.id));
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * @openapi
+ * /api/v1/usagers/{id}/demarches:
+ *   get:
+ *     tags: [Usagers]
+ *     summary: Demarches de l'usager (CNI/Passeport, attestations), triees par date decroissante
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Liste des demarches
+ */
+router.get("/:id/demarches", async (req, res, next) => {
+  try {
+    res.json(await usagerService.demarches(req.params.id));
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get("/:id", async (req, res, next) => {
   try {
     const usager = await usagerService.getById(req.params.id);

@@ -28,10 +28,12 @@ const usagerRepository = {
   },
 
   async findAll({
-    archived = false, search = "", nom, prenom, telephone, adresse, code_postal, ville,
+    archived = false, search = "", date_naissance, nom, prenom, telephone, adresse, code_postal, ville,
     limit = 50, offset = 0,
   } = {}) {
     const ATTESTATIONS = `"${SCHEMA_NAME}".attestations`;
+    const TEMPLATES = `"${SCHEMA_NAME}".templates`;
+    const PIECES = `"${SCHEMA_NAME}".dossier_pieces`;
     const LOGEMENTS = `"${SCHEMA_NAME}".logements`;
 
     const params = [archived];
@@ -39,6 +41,10 @@ const usagerRepository = {
     if (search) {
       params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
       where += ` AND (u.nom ILIKE $${params.length - 4} OR u.prenom ILIKE $${params.length - 3} OR u.email ILIKE $${params.length - 2} OR u.telephone ILIKE $${params.length - 1} OR u.mobile ILIKE $${params.length})`;
+    }
+    if (date_naissance) {
+      params.push(`%${date_naissance}%`);
+      where += ` AND to_char(u.date_naissance, 'DD/MM/YYYY') LIKE $${params.length}`;
     }
     if (nom) {
       params.push(`%${nom}%`);
@@ -66,9 +72,15 @@ const usagerRepository = {
     }
 
     const rowsQuery = `SELECT u.*, u.adresse as "Adresse",
-      (SELECT COUNT(*)::int FROM ${ATTESTATIONS} a
-       WHERE a.usager_id = u.id OR a.usager2_id = u.id OR a.usager3_id = u.id
+      (SELECT COUNT(*)::int FROM ${ATTESTATIONS} a JOIN ${TEMPLATES} t ON t.id = a.template_id
+       WHERE (a.usager_id = u.id OR a.usager2_id = u.id OR a.usager3_id = u.id)
+         AND NOT (t.nom ILIKE '%certificat%' OR t.nom ILIKE '%concubinage%')
       ) as attestation_count,
+      (SELECT COUNT(*)::int FROM ${ATTESTATIONS} a JOIN ${TEMPLATES} t ON t.id = a.template_id
+       WHERE (a.usager_id = u.id OR a.usager2_id = u.id OR a.usager3_id = u.id)
+         AND (t.nom ILIKE '%certificat%' OR t.nom ILIKE '%concubinage%')
+      ) as certificat_count,
+      (SELECT COUNT(*)::int FROM ${PIECES} p WHERE p.usager_id = u.id) as cni_count,
       EXISTS(SELECT 1 FROM ${LOGEMENTS} l WHERE l.usager_id = u.id AND l.type_logement = 'principal') as has_logement_principal,
       EXISTS(SELECT 1 FROM ${LOGEMENTS} l WHERE l.usager_id = u.id AND l.type_logement = 'secondaire') as has_logement_secondaire
       FROM ${TABLE} u WHERE ${where}
@@ -77,6 +89,38 @@ const usagerRepository = {
 
     const countResult = await db.get(`SELECT COUNT(*) as total FROM ${TABLE} u WHERE ${where}`, params);
     return { rows, total: parseInt(countResult.total, 10) };
+  },
+
+  async findPieces(id) {
+    return db.all(
+      `SELECT p.id, p.dossier_id, p.type_piece, p.statut, p.date_demande, p.date_arrivee,
+              p.date_recuperation, d.nom AS destinataire_nom, d.prenom AS destinataire_prenom
+       FROM "${SCHEMA_NAME}".dossier_pieces p
+       LEFT JOIN ${TABLE} d ON p.destinataire_usager_id = d.id
+       WHERE p.usager_id = $1
+       ORDER BY p.date_demande DESC, p.created_at DESC`,
+      [id]
+    );
+  },
+
+  async findDemarches(id) {
+    const PIECES = `"${SCHEMA_NAME}".dossier_pieces`;
+    const ATTESTATIONS = `"${SCHEMA_NAME}".attestations`;
+    return db.all(
+      `SELECT * FROM (
+         SELECT 'cni' AS type, p.id::text AS id, p.type_piece AS libelle, p.statut AS statut,
+                p.date_demande::timestamptz AS date_demarche, p.dossier_id::text AS ref
+         FROM ${PIECES} p WHERE p.usager_id = $1
+         UNION ALL
+         SELECT CASE WHEN t.nom ILIKE '%certificat%' OR t.nom ILIKE '%concubinage%' THEN 'certificat' ELSE 'attestation' END,
+                a.id::text, a.titre, a.statut,
+                COALESCE(a.date_generation, a.created_at), a.id::text
+         FROM ${ATTESTATIONS} a
+         LEFT JOIN "${SCHEMA_NAME}".templates t ON t.id = a.template_id
+         WHERE a.usager_id = $1 OR a.usager2_id = $1 OR a.usager3_id = $1
+       ) d ORDER BY date_demarche DESC NULLS LAST`,
+      [id]
+    );
   },
 
   async findById(id) {
@@ -96,8 +140,9 @@ const usagerRepository = {
       `INSERT INTO ${TABLE} (civilite, nom, prenom, nom_usage, date_naissance, lieu_naissance,
         pays_naissance, nationalite, situation_familiale, email, telephone, mobile,
         Adresse, complement_adresse, code_postal, ville, pays,
-        mail_actif, consentement_rgpd, date_consentement, created_by)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
+        mail_actif, consentement_rgpd, date_consentement, created_by,
+        mention_nom_usage, taille, couleur_yeux, piece_identite_type, piece_identite_numero)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26)
        RETURNING *`,
       [
         data.civilite || "M.", formatName(data.nom), formatName(data.prenom), data.nom_usage ? formatName(data.nom_usage) : null,
@@ -109,6 +154,8 @@ const usagerRepository = {
         data.mail_actif !== false, data.consentement_rgpd === true,
         data.consentement_rgpd ? new Date().toISOString() : null,
         data.created_by || null,
+        data.mention_nom_usage || null, data.taille ? Number(data.taille) : null, data.couleur_yeux || null,
+        data.piece_identite_type || null, data.piece_identite_numero || null,
       ]
     );
     return result.rows ? result.rows[0] : result;
@@ -125,7 +172,7 @@ const usagerRepository = {
       "civilite", "nom", "prenom", "nom_usage", "date_naissance", "lieu_naissance",
       "pays_naissance", "nationalite", "situation_familiale", "email", "telephone", "mobile",
       "adresse", "complement_adresse", "code_postal", "ville", "pays",
-      "mail_actif", "consentement_rgpd",
+      "mail_actif", "consentement_rgpd", "mention_nom_usage", "taille", "couleur_yeux", "piece_identite_type", "piece_identite_numero",
     ];
     for (const key of allowed) {
       if (data[key] !== undefined) {
@@ -133,7 +180,7 @@ const usagerRepository = {
         if (key === "nom" || key === "prenom" || key === "nom_usage") {
         params.push(formatName(data[key]));
       } else {
-        params.push(data[key]);
+        params.push(key === "taille" ? (data[key] ? Number(data[key]) : null) : data[key]);
       }
         idx++;
       }

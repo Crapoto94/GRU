@@ -17,12 +17,15 @@ import ParametrageDatabase from "./pages/ParametrageDatabase";
 import ParametrageApiVille from "./pages/ParametrageApiVille";
 import ParametrageSynbird from "./pages/ParametrageSynbird";
 import ParametrageMessages from "./pages/ParametrageMessages";
+import ParametrageEtapes from "./pages/ParametrageEtapes";
+import ParametrageGabarits from "./pages/ParametrageGabarits";
 import DossiersList from "./pages/DossiersList";
 import DossierForm from "./pages/DossierForm";
 import DossierDetail from "./pages/DossierDetail";
 import UsersPage from "./pages/UsersPage";
 import LogsPage from "./pages/LogsPage";
 import RgpdPage from "./pages/RgpdPage";
+import CertificatsList from "./pages/CertificatsList";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { token } = useAuth();
@@ -40,15 +43,23 @@ function RgpdRoute({ children }: { children: React.ReactNode }) {
 export default function App() {
   const [showWhatsNew, setShowWhatsNew] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [showManifest, setShowManifest] = useState(false);
+  const [showAgents, setShowAgents] = useState(false);
 
   useEffect(() => {
     const handlerWhatsNew = () => setShowWhatsNew(true);
     const handlerHelp = () => setShowHelp(true);
+    const handlerManifest = () => setShowManifest(true);
+    const handlerAgents = () => setShowAgents(true);
     window.addEventListener("open-whats-new", handlerWhatsNew);
     window.addEventListener("open-help", handlerHelp);
+    window.addEventListener("open-manifest", handlerManifest);
+    window.addEventListener("open-agents", handlerAgents);
     return () => {
       window.removeEventListener("open-whats-new", handlerWhatsNew);
       window.removeEventListener("open-help", handlerHelp);
+      window.removeEventListener("open-manifest", handlerManifest);
+      window.removeEventListener("open-agents", handlerAgents);
     };
   }, []);
 
@@ -70,9 +81,14 @@ export default function App() {
                   <Route path="/attestations" element={<AttestationsList />} />
                   <Route path="/attestations/ada" element={<AdasList />} />
                   <Route path="/attestations/nouvelle" element={<AttestationGenerate />} />
+                  <Route path="/attestations/:id/modifier" element={<AttestationGenerate />} />
                   <Route path="/dossiers" element={<DossiersList />} />
                   <Route path="/dossiers/nouveau" element={<DossierForm />} />
                   <Route path="/dossiers/:id" element={<DossierDetail />} />
+                  <Route path="/dossiers/:id/modifier" element={<DossierForm />} />
+                  <Route path="/certificats" element={<CertificatsList />} />
+                  <Route path="/certificats/nouveau" element={<AttestationGenerate kind="certificat" />} />
+                  <Route path="/certificats/:id/modifier" element={<AttestationGenerate kind="certificat" />} />
                   <Route path="/rgpd" element={<RgpdRoute><RgpdPage /></RgpdRoute>} />
                   <Route path="/parametrage/attestations" element={<ParametrageAttestations />} />
                   <Route path="/parametrage/listes-correspondance" element={<ListesCorrespondance />} />
@@ -80,6 +96,8 @@ export default function App() {
                   <Route path="/parametrage/api-ville" element={<ParametrageApiVille />} />
                   <Route path="/parametrage/synbird" element={<ParametrageSynbird />} />
                   <Route path="/parametrage/messages" element={<ParametrageMessages />} />
+                  <Route path="/parametrage/etapes-dossiers" element={<ParametrageEtapes />} />
+                  <Route path="/parametrage/gabarits" element={<ParametrageGabarits />} />
                   <Route path="/parametrage/utilisateurs" element={<UsersPage />} />
                   <Route path="/parametrage/logs" element={<LogsPage />} />
                   <Route path="*" element={<Navigate to="/" replace />} />
@@ -88,6 +106,18 @@ export default function App() {
             </div>
             <WhatsNewModal isOpen={showWhatsNew} onClose={() => setShowWhatsNew(false)} />
             <HelpModal isOpen={showHelp} onClose={() => setShowHelp(false)} />
+            <HelpModal
+              isOpen={showManifest}
+              onClose={() => setShowManifest(false)}
+              source="/manifest.md"
+              title="Manifest de l'application"
+            />
+            <HelpModal
+              isOpen={showAgents}
+              onClose={() => setShowAgents(false)}
+              source="/AGENTS.md"
+              title="Instructions agents (AGENTS)"
+            />
           </ProtectedRoute>
         }
       />

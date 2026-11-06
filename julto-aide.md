@@ -1,12 +1,17 @@
 # Aide JULTO — Gestion des Relations Usager
 
-JULTO (« J'ai Un Lien pour Tout, Ouf ! ») est l'outil de gestion des relations usager des collectivités territoriales : référentiel usager et génération d'attestations à partir de templates Word.
+JULTO (« J'ai Un Lien pour Tout, Ouf ! ») est l'outil de gestion des relations usager des collectivités territoriales : référentiel usager, attestations d'accueil, certificats, demandes CNI / Passeport et courriers, générés à partir de templates Word.
 
 ---
 
 ## 1. Tableau de bord
 
-Page d'accueil après connexion. Affiche les compteurs globaux (nombre d'usagers, nombre d'attestations) et les alertes éventuelles.
+Page d'accueil après connexion. Quatre rangées de tuiles, **cliquables** (elles ouvrent la liste concernée, déjà filtrée) :
+
+- **Usagers** : usagers actifs, Ivry, hors Ivry, majeurs, mineurs (calculés d'après la date de naissance).
+- **CNI / Passeport** : total, En cours, Ajourné, Arrivé, Archivé — un clic ouvre la liste CNI / Passeport filtrée sur ce statut.
+- **Attestations d'accueil** : total, En cours, Ajourné, Arrivé, Archivé — un clic ouvre la liste des attestations filtrée.
+- **Délais moyens d'arrivée** des pièces CNI / Passeport (demande → arrivée) sur les 7 et les 30 derniers jours.
 
 ## 2. Connexion
 
@@ -24,12 +29,13 @@ Menu **Usagers**.
 
 ### 3.1 Consulter / rechercher
 - Liste de tous les usagers actifs (pagination).
-- Recherche par nom, prénom, email, **téléphone fixe ou mobile**.
-- Tri par colonnes (nom, date de création, nombre d'attestations).
-- **Détection de doublons** à la création ou modification (basée sur nom + date de naissance, ou téléphone) : une fenêtre propose de consulter la fiche existante, de créer quand même une nouvelle fiche, ou de mettre à jour la fiche existante.
-- Un badge sur chaque usager indique le nombre d'attestations générées pour lui ; un clic ouvre la liste (titre, template, statut, date) avec téléchargement direct.
-- Une icône logement indique si un logement est renseigné : maison si un seul (principal ou secondaire), bâtiment si les deux le sont.
-- Accès aux usagers **archivés** via un onglet dédié.
+- Colonnes : nom, prénom, date de naissance, lieu de naissance, téléphone, adresse, **CNI/Pass**, **Attestations**, **Certificats**, actions.
+- Deux champs de recherche : la **date de naissance** (saisir `25121986` suffit, les « / » se mettent tout seuls) et le **nom / prénom / email / téléphone**. La « Recherche avancée » (nom, prénom, téléphone, adresse, code postal, ville) reste disponible.
+- **Ligne dépliable** : un clic sur une ligne affiche toutes les démarches de l'usager (CNI / Passeport, attestations, certificats), de la plus récente à la plus ancienne ; une ligne CNI ouvre le dossier.
+- **Pastilles** : CNI/Pass (rouge) ouvre le détail des demandes de l'usager (type, statut, dates) ; Attestations (bleu) et Certificats (violet) ouvrent la liste des documents correspondants avec téléchargement.
+- **Détection de doublons** à la création ou modification (nom + date de naissance, ou téléphone).
+- Une icône logement (dans les actions) ouvre la fiche logement ; l'icône crayon ouvre la fiche usager.
+- Accès aux usagers **archivés** via la case « Archives ».
 
 ### 3.2 Créer / modifier un usager
 Champs disponibles :
@@ -48,82 +54,94 @@ Champs disponibles :
 
 ---
 
-## 4. Génération d'attestations
+## 4. Attestations d'accueil
 
-Menu **Attestations**.
+Menu **Attestations d'accueil**. Il n'y a qu'un seul modèle : le formulaire le retrouve tout seul (aucun menu déroulant).
 
 ### 4.1 Consulter
-- Liste de toutes les attestations générées, avec filtres par statut (en attente, générée, erreur) et par usager.
-- Téléchargement du document généré (.docx) à tout moment.
-- Affichage du template utilisé, de l'usager concerné, de la date et de l'auteur.
+Tableau des attestations : **agent, CERFA, hébergeant, date de naissance, hébergé, période de validité, statut, « depuis », date de demande, contact, actions**. Recherche par nom, n° CERFA ou n° de demande ; les attestations archivées sont masquées par défaut (filtre « Statuts actifs / Tous »).
 
-### 4.2 Générer une nouvelle attestation
-Processus pas à pas :
-1. **Choisir le template** (modèle de document) à utiliser dans la liste déroulante.
-2. **Sélectionner l'usager concerné** via le moteur de recherche (ou 2 à 3 usagers si le template le prévoit, ex. « Demandeur » / « Bénéficiaire » / « Témoin »).
-3. **Préciser le logement concerné** si le template le demande (logement principal et secondaire tous deux activés sur le template) : un choix « Logement principal » / « Logement secondaire » apparaît et est obligatoire avant de générer.
-4. **Renseigner les variables personnalisées** définies sur le template :
-   - Si le template définit des **valeurs autorisées** pour une variable → liste déroulante, vide par défaut (aucune présélection).
-   - Sinon → champ texte libre.
-5. **Générer** → le document Word est produit automatiquement à partir des informations de l'usager et téléchargé.
+Statuts, modifiables directement dans la liste (aucun sous-statut) :
+- **En cours**, **Arrivé**, **Récupéré**, **Archivé** ;
+- **Ajourné** : une petite fenêtre demande le **document manquant**, affiché sous le statut.
 
-Les informations usager insérées automatiquement dans le document incluent :
-- Civilité, nom, prénom, nom complet, nom d'usage
-- Formulation « né »/« née » selon la civilité
-- Date de naissance (formats courts et longs)
-- Lieu et pays de naissance, nationalité
-- Situation familiale
-- Email, téléphone fixe, mobile
-- Adresse complète, code postal, ville, pays
-- Date du jour (formats court et long)
+La colonne **Depuis** compte les jours passés dans le statut courant. Pour une attestation **Arrivée**, le nombre de jours passe en **rouge** quand la période de validité est dépassée : elle peut alors être archivée.
 
-### 4.3 Supprimer une attestation
+Actions : télécharger le document, **modifier** (crayon), **archiver**, supprimer (administrateurs).
+
+### 4.2 Créer une attestation
+Bouton **Nouvelle attestation** : un formulaire unique, sans création d'usager séparée.
+1. **Demandeur** : état civil (civilité, nom, prénom, nom d'usage, mention nom d'usage, naissance, nationalité, pièce CNI / Passeport / Titre de séjour et numéro) et contact. En tapant le nom, le prénom ou la date de naissance, l'outil **compte les usagers qui correspondent** et propose d'en choisir un ; le champ « Rechercher un usager » permet aussi de retrouver une fiche. Une fois la fiche liée, toute modification (téléphone, adresse…) **met à jour la fiche usager** à l'enregistrement. Sans choix, une fiche est créée.
+2. **2ᵉ / 3ᵉ usager** si le modèle le prévoit (hébergé, témoin…), même fonctionnement.
+3. **Demande** : date de la demande, n° CERFA, début et fin de validité.
+4. **Logement** (sous le demandeur) : statut d'occupation, adresse (préremplie), complément, code postal, ville, bâtiment / escalier, surface, nombre de pièces, état sanitaire, occupants habituels (âge et lien de parenté), occupants permanents et temporaires. Si le modèle couvre les deux logements, un choix principal / secondaire apparaît.
+5. **Variables supplémentaires** du modèle, le cas échéant.
+6. **Générer** : le document Word est produit et téléchargé.
+
+### 4.3 Modifier une attestation
+Le **crayon** de la liste rouvre la même interface, préremplie. « Enregistrer et régénérer » met à jour les fiches et le logement, génère la nouvelle attestation et **remplace l'ancienne**.
+
+### 4.4 Supprimer une attestation
 Réservé aux **administrateurs**.
 
 ---
 
-## 5. Demandes CNI / Passeport
+## 4 bis. Certificats
 
-Menu **Demandes CNI / Passeport**. Accessible à tous les utilisateurs connectés (pas réservé aux administrateurs).
+Menu **Certificats** (certificat de vie, de domicile, de changement définitif de résidence, de concubinage, de vie commune…). Un **certificat est remis immédiatement : il n'a donc pas de statut**.
+
+- Tableau : agent, usagers (pour concubinage et vie commune, les **noms et dates de naissance des 2 usagers l'un sous l'autre**), motif, date de demande, contact, actions (télécharger, modifier, archiver).
+- Deux champs de recherche : date de naissance (sans taper les « / ») et nom / prénom.
+- **Nouveau certificat** : même formulaire que l'attestation d'accueil, avec le **choix du motif** (= le modèle). Le crayon permet de modifier un certificat.
+- L'ancienne « attestation de concubinage » devient « **certificat de concubinage** » (modèles et titres déjà générés renommés).
+
+---
+
+## 5. CNI / Passeport
+
+Menu **CNI / Passeport**. Accessible à tous les utilisateurs connectés.
 
 ### 5.1 Principe
-Un **dossier** regroupe une ou plusieurs **pièces d'identité** (CNI et/ou Passeport) demandées, pouvant concerner **plusieurs usagers en une seule fois** (ex. dossier familial). Chaque pièce suit son propre statut, avec un **destinataire de notification** propre (utile pour notifier un parent plutôt que l'enfant concerné) et un canal de notification (email, SMS, ou les deux).
+Un **dossier** regroupe les pièces (CNI et/ou Passeport) demandées pour un bénéficiaire. Chaque pièce a un **motif**, un statut et une **frise chronologique**. Le retrait et les notifications concernent le **tuteur** (si tutelle), sinon le **parent 1**, sinon le bénéficiaire.
 
-Statuts d'une pièce :
+Statuts d'une pièce (couleurs de pastille) :
 
 | Statut | Signification |
 |---|---|
-| **Demandé** | pièce commandée, en attente |
-| **Ajourné** | traitement suspendu/reporté |
-| **Arrivé** | pièce disponible en mairie, prête à être retirée |
-| **Récupéré** | pièce remise à l'usager |
+| **En cours** (gris) | demande déposée, en cours d'instruction |
+| **Ajourné** (orange) | dossier suspendu : un document ou une précision est à fournir |
+| **Arrivé** (vert) | pièce disponible en mairie ; en **rouge** après 60 jours (à relancer) |
+| **Récupéré** (bleu) | pièce remise |
+| **Archivé** (gris) | dossier clos : rejeté ou refusé par la préfecture, pièce renvoyée |
+| **Erreur pièce** (violet) | erreur sur la pièce reçue (avec commentaire) |
 
-### 5.2 Consulter la liste des dossiers
-`Demandes CNI / Passeport`
+### 5.2 La liste
+Une **ligne par pièce** : agent, usager, date de naissance, pièce (CNI / PASS), motif, statut, **depuis**, date de demande, contact, actions (œil : voir le dossier, crayon : modifier le dossier, archiver).
 
-- Tableau regroupé **par dossier** (pas par pièce individuelle), avec recherche par usager et filtres par statut et par type de pièce (CNI / Passeport).
-- Colonnes triables : usagers, nombre de personnes, nombre de pièces, statuts (badges récapitulatifs), **temps d'attente** (nombre de jours depuis la plus ancienne pièce encore en statut Demandé/Ajourné), date de création.
-- Clic sur une ligne → ouvre le détail du dossier.
+- Recherche par **date de naissance** (sans les « / ») et par **nom, prénom ou téléphone** ; filtres « Toutes les pièces » et « Tous les statuts » ; case « Afficher les dossiers archivés » (les dossiers récupérés ou archivés sont masqués par défaut).
+- Le **statut se change directement dans la liste**, sans ouvrir le dossier (pour Ajourné et Erreur pièce, la fiche du dossier s'ouvre pour préciser le motif).
+- **Depuis** : en cours = jours depuis la demande (les périodes d'ajournement s'additionnent) ; ajourné / arrivé / récupéré = jours depuis l'entrée dans le statut. **Rouge à partir de 60 jours** pour arrivé et ajourné, pour repérer les relances.
+- Les **mineurs** ont leur nom en violet ; l'icône **empreinte** signale les mineurs de **12 ans et plus**, dont la présence est requise au retrait.
 
-### 5.3 Créer un dossier
-Bouton **« Nouveau dossier »** :
-1. Rechercher et ajouter un ou plusieurs usagers au dossier.
-2. Pour chaque usager : cocher la ou les pièces demandées (CNI et/ou Passeport), la date de la demande, le destinataire à notifier dès disponibilité (n'importe quel usager du dossier) et le canal de notification (email / SMS / les deux).
-3. **Créer le dossier**.
+### 5.3 Créer ou modifier un dossier
+Bouton **« Nouveau dossier »** (crayon de la liste pour modifier : même interface, préremplie). Aucune pièce n'est cochée par défaut.
+1. **Bénéficiaire** : case **Tutelle** (cumulable avec majeur ou mineur). **Majeur ou mineur se déduit de la date de naissance.**
+2. **Motif** par pièce : 1ère demande, Renouvellement, Identité numérique, Perte, Vol, Détérioration, Changement d'état civil, Erreur imputable à l'administration, Pages visa passeport complètes.
+3. **État civil** complet (nom d'usage, mention nom d'usage, taille, couleur des yeux), contact, adresse. En tapant nom / prénom / date, l'outil **compte et propose les usagers correspondants** ; une fiche liée est **mise à jour** à l'enregistrement. **Aucun usager ne se crée à part.**
+4. **Mineur** : sections **Parent 1** et **Parent 2** (facultatif), adresse de la famille (case pour une **2ᵉ adresse** si les parents habitent séparément). Le nom des parents apparaît automatiquement pour le retrait.
+5. **Tutelle** : section **Tuteur**, dont le nom apparaît pour le retrait.
 
 ### 5.4 Suivre un dossier
-Depuis le détail d'un dossier :
-- **Changer le statut** de chaque pièce directement (menu déroulant sur le badge de statut).
-- **Retirer une pièce** du dossier (impossible si c'est la dernière pièce — il faut alors supprimer le dossier entier).
-- Quand une pièce passe au statut **Arrivé**, la ligne est mise en surbrillance et deux boutons apparaissent : **« Envoyer SMS »** et **« Envoyer Email »** vers le destinataire choisi (désactivés si le destinataire n'a pas de téléphone/email renseigné). **L'envoi n'est jamais automatique**, toujours déclenché manuellement par l'agent.
-- Un bouton **« Historique »** affiche les notifications déjà envoyées pour cette pièce (canal, destinataire, date, succès/échec).
-- Section **« Suivi du dossier »** : ajout de commentaires libres horodatés, en plus des entrées automatiques générées par le système (changement de statut, retrait de pièce, envoi/échec de notification, création du dossier) — repérables à la mention « - automatique ».
-- **Suppression du dossier** entier (avec confirmation), disponible pour tous les utilisateurs.
+Depuis la fiche du dossier :
+- **« Changer d'état »** : menu par groupes (En cours : dossier déposé / actualisé ; Ajourné : photo, signature, justificatif de domicile, déclaration de vol, jugement, justificatif d'identité ; Arrivé : retour en mairie, relance téléphonique ; Récupéré : par le demandeur, parent 1, parent 2, tuteur, mandataire ; Archivé : rejet / refus préfecture, pièce renvoyée ; Erreur pièce). Pour **Ajourné** et **Erreur pièce**, une **case commentaire** précise la nature (ex. photo de plus de 6 mois) ; elle s'affiche dans le dossier et la frise.
+- **Frise chronologique** de chaque pièce.
+- **Courrier** : l'icône enveloppe génère le courrier Word correspondant au statut (ajournement, relance si arrivé, archivage) ; il est tracé dans le suivi.
+- Pièce **Arrivée** : boutons **Envoyer SMS / Email** au destinataire (jamais automatique) et **Historique** des notifications.
+- **Suivi du dossier** : commentaires libres et entrées automatiques.
+- Retrait d'une pièce, suppression du dossier.
 
 ### 5.5 Paramétrer les modèles de messages
-`Paramétrage > Messages` (réservé aux **administrateurs**)
-
-Modèles des messages SMS/email envoyés lors de la notification d'une pièce disponible, avec variables (`{{prenom}}`, `{{nom}}`, `{{civilite}}`, `{{type_piece}}`, `{{type_piece_label}}`, `{{destinataire_prenom}}`, `{{destinataire_nom}}`) et aperçu en direct. Bouton pour réinitialiser aux valeurs par défaut.
+`Paramétrage > Messages` (**administrateurs**) : modèles SMS / email de notification, variables (`{{prenom}}`, `{{nom}}`, `{{civilite}}`, `{{type_piece}}`, `{{type_piece_label}}`, `{{destinataire_prenom}}`, `{{destinataire_nom}}`), aperçu, réinitialisation.
 
 ---
 
@@ -183,6 +201,16 @@ Voir section 5.5. Conçu pour accueillir d'autres contextes de messages à l'ave
 
 ### 6.8 Nouveautés / changelog
 Un bouton **Nouveautés** dans le menu latéral ouvre l'historique des versions de l'application (accordéon par version, dernière version mise en avant). Le numéro de version en cours est affiché en bas du menu. Accessible à tous les utilisateurs.
+
+### 6.9 Étapes des dossiers CNI
+`Paramétrage > Étapes dossiers CNI`
+
+Gère les choix du menu **« Changer d'état »** de la fiche dossier, groupés par statut : libellé, **Commentaire** (affiche une case de précision), **Personne** (parent 1, parent 2 ou tuteur : le choix n'est proposé que si le dossier comporte cette personne, dont le nom s'ajoute au libellé), **Actif**, ordre (flèches), ajout et retrait. Cliquer sur **Enregistrer** pour appliquer. Les frises déjà enregistrées ne changent pas.
+
+### 6.10 Gabarits de courriers
+`Paramétrage > Gabarits`
+
+Trois gabarits Word (courrier d'ajournement, de relance, d'archivage) : **télécharger** le gabarit en vigueur, le modifier dans Word, le **remplacer** par la version modifiée (vérifiée avant acceptation), ou **rétablir** le gabarit par défaut. La page liste les variables disponibles, à écrire entre doubles accolades (`{{nom_complet}}`, `{{motif}}`, `{{commentaire}}`, `{{destinataire_adresse}}`…).
 
 ---
 

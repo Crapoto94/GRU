@@ -63,7 +63,7 @@ const VARIABLES_SYSTEME = [
 ];
 
 const NB_USAGERS_OPTIONS = [1, 2, 3];
-const NB_USAGERS_LABELS: Record<number, string> = { 1: "1 usager (ex: Attestation de domicile)", 2: "2 usagers (ex: Attestation de concubinage)", 3: "3 usagers (ex: Attestation familiale)" };
+const NB_USAGERS_LABELS: Record<number, string> = { 1: "1 usager (ex: Attestation de domicile)", 2: "2 usagers (ex: Certificat de concubinage)", 3: "3 usagers (ex: Attestation familiale)" };
 
 function VariablesEditor({ value, onChange, listes }: { value: VariableDef[]; onChange: (v: VariableDef[]) => void; listes: ListeReference[] }) {
   const add = () => onChange([...value, {description: "", allowedValues: []}]);

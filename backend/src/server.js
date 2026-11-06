@@ -16,6 +16,8 @@ const usersRoutes = require("./modules/users/users.routes");
 const parametrageRoutes = require("./modules/parametrage/parametrage.routes");
 const adRoutes = require("./modules/ad/ad.routes");
 const logsRoutes = require("./modules/logs/logs.routes");
+const gabaritsRoutes = require("./modules/gabarits/gabarits.routes");
+const statsRoutes = require("./modules/stats/stats.routes");
 const dossiersRoutes = require("./modules/dossiers/dossiers.routes");
 const rgpdRoutes = require("./modules/rgpd/rgpd.routes");
 const listesRoutes = require("./modules/listes/listes.routes");
@@ -69,6 +71,8 @@ app.use("/api/v1/parametrage", authenticateToken, parametrageRoutes);
 app.use("/api/v1/ad", authenticateToken, adRoutes);
 app.use("/api/v1/logs", authenticateToken, logsRoutes);
 app.use("/api/v1/dossiers", authenticateToken, dossiersRoutes);
+app.use("/api/v1/stats", authenticateToken, statsRoutes);
+app.use("/api/v1/gabarits", authenticateToken, gabaritsRoutes);
 app.use("/api/v1/rgpd", authenticateToken, rgpdRoutes);
 app.use("/api/v1/listes-correspondance", authenticateToken, listesRoutes);
 

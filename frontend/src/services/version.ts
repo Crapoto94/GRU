@@ -1,4 +1,4 @@
-export const VERSION = "0.3.3";
+export const VERSION = "0.4.0";
 
 export interface ChangelogEntry {
   version: string;
@@ -7,6 +7,26 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG = [
+  {
+    version: "0.4.0",
+    date: "2026-11-06",
+    features: [
+      "Menu reorganise : Tableau de bord, Usagers, CNI / Passeport, Attestations d'accueil, Certificats, RGPD, Parametrage",
+      "Tableau de bord refait : usagers (Ivry, hors Ivry, majeurs, mineurs), CNI / Passeport et attestations par statut, delais moyens d'arrivee (7 et 30 jours) ; tuiles cliquables qui ouvrent la liste filtree",
+      "Liste des usagers : colonnes nom, naissance, adresse, CNI/Pass, attestations, certificats ; recherche par date de naissance (sans taper les /) et par nom ; ligne depliable avec toutes les demarches triees par date ; pastilles cliquables (detail des demandes CNI, attestations, certificats)",
+      "Formulaires sans creation d'usager separee : tous les champs usager sont saisis dans le dossier ou l'attestation, les usagers correspondants (nom, prenom, date de naissance) sont comptes et proposes, et la fiche usager liee est mise a jour a l'enregistrement",
+      "Nouveau dossier CNI / Passeport : motif par piece (9 motifs), etat civil complet (mention nom d'usage, taille, couleur des yeux), majeur / mineur deduit de la date de naissance, case Tutelle, Parent 1 / Parent 2 et 2e adresse pour un mineur, Tuteur si tutelle, nom du retrait genere automatiquement ; meme interface pour modifier un dossier",
+      "Liste CNI / Passeport : une ligne par piece (agent, usager, naissance, piece, motif, statut, depuis, date de demande, contact), statut modifiable en ligne, libelles En cours / Archive, nouveau statut Erreur piece, jours en rouge a partir de 60 j, mineurs en violet et icone empreinte des 12 ans, recherche avancee retiree au profit de la recherche par naissance et par nom/telephone",
+      "Fiche dossier : menu Changer d'etat simplifie par groupes (ajourne : photo, signature, justificatif de domicile...; recupere : demandeur, parent 1, parent 2, tuteur, mandataire; archive : rejet / refus prefecture, piece renvoyee), commentaire pour ajourne et erreur piece affiche dans le dossier et la frise",
+      "Parametrage > Etapes dossiers CNI : les choix du menu Changer d'etat sont parametrables (libelle, commentaire, personne, actif, ordre)",
+      "Parametrage > Gabarits et courriers : trois courriers Word types (ajournement, relance, archivage) a telecharger, modifier et reuploader ; generation du courrier depuis la fiche dossier, tracee dans le suivi",
+      "Attestation d'accueil : formulaire unique sans menu deroulant (demandeur, demande avec CERFA et periode, logement dessous), modification d'une attestation (regeneration qui remplace l'ancienne) ; liste avec agent, CERFA, hebergeant, hebergé, periode, statuts modifiables en ligne (en cours, ajourne avec document manquant, arrive, recupere, archive), depuis en jours (rouge si periode depassee)",
+      "Certificats : nouvelle rubrique (liste, creation avec choix du motif, modification, archivage), sans statut ; les deux usagers d'un certificat de concubinage / vie commune sont affiches l'un sous l'autre ; l'attestation de concubinage devient certificat de concubinage",
+      "Variables de fusion ajoutees : mention_nom_usage, piece_identite_type, piece_identite_numero",
+      "Correctifs : la modification de l'adresse d'un usager n'etait pas enregistree ; la fenetre des attestations d'un usager etait vide pour les attestations ALTO archivees",
+      "Qualite : controle de code (lint) en place, manifest et aide utilisateur mis a jour",
+    ],
+  },
   {
     version: "0.3.3",
     date: "2026-08-28",

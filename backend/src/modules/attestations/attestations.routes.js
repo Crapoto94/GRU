@@ -450,7 +450,7 @@ router.get("/:id", async (req, res, next) => {
  */
 router.post("/generate", async (req, res, next) => {
   try {
-    const { usager_id, usager2_id, usager3_id, template_id, custom_data, logement_concerne } = req.body;
+    const { usager_id, usager2_id, usager3_id, template_id, custom_data, logement_concerne, replace_id, no_cerfa, date_demande, date_debut_validite, date_fin_validite } = req.body;
     if (!usager_id || !template_id) {
       throw Object.assign(new Error("usager_id et template_id sont requis"), { status: 400 });
     }
@@ -462,8 +462,11 @@ router.post("/generate", async (req, res, next) => {
       req.ip,
       usager2_id,
       usager3_id,
-      logement_concerne
+      logement_concerne,
+      { no_cerfa, date_demande, date_debut_validite, date_fin_validite }
     );
+    // Modification d'une attestation : l'ancienne version est remplacee une fois la nouvelle generee.
+    if (replace_id) await attestationService.remove(replace_id, req.user?.login || "system", req.ip);
     res.status(201).json(attestation);
   } catch (err) {
     console.error("[GENERATE ERROR]", err);
@@ -487,6 +490,50 @@ router.post("/generate", async (req, res, next) => {
  *       200:
  *         description: Fichier PDF
  */
+/**
+ * @openapi
+ * /api/v1/attestations/{id}/suivi:
+ *   patch:
+ *     tags: [Attestations]
+ *     summary: Changer le statut de suivi (en_cours, ajourne, arrive, recupere, archive)
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [statut]
+ *             properties:
+ *               statut:
+ *                 type: string
+ *               commentaire:
+ *                 type: string
+ *                 description: Document manquant (obligatoire pour ajourne)
+ *     responses:
+ *       200:
+ *         description: Attestation mise a jour
+ */
+router.patch("/:id/suivi", async (req, res, next) => {
+  try {
+    const result = await attestationService.updateSuivi(
+      req.params.id,
+      req.body.statut,
+      req.body.commentaire,
+      req.user?.login || "system",
+      req.ip
+    );
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get("/:id/download", async (req, res, next) => {
   try {
     const attestation = await attestationService.getAttestationById(req.params.id);
